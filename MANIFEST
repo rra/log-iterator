@@ -1,0 +1,11 @@
+Build.PL
+lib/Log/Stream.pm
+MANIFEST			This list of files
+t/critic.t
+t/data/samples/syslog
+t/minimum-version.t
+t/pod-coverage.t
+t/pod-spelling.t
+t/pod.t
+t/stream/basic.t
+t/synopsis.t
