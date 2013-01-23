@@ -1,15 +1,26 @@
 Build.PL
 lib/Log/Stream.pm
+lib/Log/Stream/File.pm
+lib/Log/Stream/Filter.pm
+lib/Log/Stream/Parsed.pm
+lib/Log/Stream/Parsed/Apache/Error.pm
 lib/Log/Stream/Transform.pm
 MANIFEST			This list of files
+t/data/parsed/webkdc-apache
 t/data/perlcriticrc
 t/data/perltidyrc
 t/data/samples/syslog
+t/data/samples/webkdc
 t/docs/pod-coverage.t
 t/docs/pod-spelling.t
 t/docs/pod.t
 t/docs/synopsis.t
+t/parsed/apache/error.t
+t/parsed/basic.t
+t/parsed/subclass.t
 t/stream/basic.t
+t/stream/file.t
+t/stream/filter.t
 t/stream/transform.t
 t/style/critic.t
 t/style/minimum-version.t
