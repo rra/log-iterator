@@ -1,4 +1,4 @@
-# Log::Stream::Parsed::Apache::Error -- Stream parser for Apache error logs
+# Log::Stream::Parse::WebKDC -- Stream parser for WebAuth WebKDC logs
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -8,62 +8,44 @@
 # Modules and declarations
 ##############################################################################
 
-package Log::Stream::Parsed::Apache::Error;
+package Log::Stream::Parse::WebKDC;
 
 use 5.010;
 use autodie;
 use strict;
 use warnings;
 
-use base qw(Log::Stream::Parsed);
+use base qw(Log::Stream::Parse::Apache::Error);
 
-use Date::Parse ();
 use Readonly;
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
-# Regex matching an Apache log timestamp.  Returns the timestamp (without the
-# day of the week) as $1.
-Readonly my $TIMESTAMP_REGEX => qr{
-    \[
-      \w{3} \s+                 # Day of the week
-      (                         # Start of interesting timestamp
-          \w{3}                 #   month
-          \s+ \d+               #   day of month
-          \s+ \d{2}:\d{2}:\d{2} #   time of day
-          \s+ \d{4}             #   year
-      )
-    \]
-}xms;
-
-# Regex matching an Apache log level.  Returns the log level as $1.
-Readonly my $LEVEL_REGEX => qr{ \[ (\w+) \] }xms;
-
-# Regex matching a client IP address.  Returns the IP address as $1.
-Readonly my $CLIENT_REGEX => qr{ \[ client \s+ ([[:xdigit:].:]+) \] }xms;
-
-# Regex matching a whole Apache error log line.  Returns:
-#
-#     $1 - Timestamp
-#     $2 - Log level
-#     $3 - Client IP address (may be empty)
-#     $4 - Rest of the log line
-Readonly my $APACHE_ERROR_REGEX => qr{
-    \A
-      $TIMESTAMP_REGEX
-      \s+ $LEVEL_REGEX
-      (?: \s+ $CLIENT_REGEX )?
-      \s+ (.+)
-    \z
+# Regex to parse a key/value pair in a WebKDC event log.  Returns the key as
+# $1 and the value as $2 or $3.
+Readonly my $PAIR_REGEX => qr{
+    ([^=\s]+)                           # key
+    =
+    (?:                                 # two possible value types
+      ( [^\"\s]* )                      #   unquoted value
+      |
+      \" ( (?:                          #   quoted value
+        \\.                             #     backslash escapes anything
+        |
+        [^\\\"]                         #     any other character
+      )* ) \"                           #   end of quote
+    )
+    (?: \s+ | \z )                      # trailing whitespace or end of string
 }xms;
 
 ##############################################################################
 # Implementation
 ##############################################################################
 
-# Given a line of Apache error log output, parse it into a result structure
-# with fields as described in the POD for this module.
+# Given a line of Apache error log output, discard it if it's not a WebKDC log
+# line.  Otherwise, parse it into a result structure with fields as described
+# in the POD for this module.
 #
 # $self - The parser object
 # $line - The line to parse
@@ -71,21 +53,31 @@ Readonly my $APACHE_ERROR_REGEX => qr{
 # Returns: The corresponding data structure or an empty hash on parse failure
 sub parse {
     my ($self, $line) = @_;
-    if ($line =~ $APACHE_ERROR_REGEX) {
-        my ($timestamp, $level, $client, $data) = ($1, $2, $3, $4);
-        $timestamp = Date::Parse::str2time($timestamp);
-        my $result = {
-            timestamp => $timestamp,
-            level     => $level,
-            data      => $data,
-        };
-        if (defined $client) {
-            $result->{client} = $client;
-        }
-        return $result;
-    } else {
+
+    # Let the Apache error log parser do most of the work.
+    my $result = $self->SUPER::parse($line);
+    my $data   = $result->{data};
+
+    # Discard this line unless it's a mod_webkdc log message.
+    if (!$data || $data !~ s{ \A mod_webkdc: \s+ }{}xms) {
         return {};
     }
+
+    # One way or another, we will fill out other keys than data.
+    delete $result->{data};
+
+    # See if this is an event.  If not, set message.  If so, parse it.
+    if ($data =~ s{ \A event = (\S+) \s+ }{}xms) {
+        $result->{event} = $1;
+        while ($data =~ m{ \G $PAIR_REGEX }gxms) {
+            my $key = $1;
+            my $value = defined $2 ? $2 : $3;
+            $result->{$key} = $value;
+        }
+    } else {
+        $result->{message} = $data;
+    }
+    return $result;
 }
 
 ##############################################################################
@@ -96,20 +88,19 @@ sub parse {
 __END__
 
 =for stopwords
-API CPAN IP Kaufmann MERCHANTABILITY NONINFRINGEMENT TimeDate sublicense
-subclasses timestamp
+Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses timestamp
 
 =head1 NAME
 
-Log::Stream::Parsed::Apache::Error - Stream parser for Apache error logs
+Log::Stream::Parse::WebKDC - Stream parser for WebAuth WebKDC logs
 
 =head1 SYNOPSIS
 
     use Log::Stream::File;
-    use Log::Stream::Parsed::Apache::Error;
-    my $path   = '/path/to/some/log';
+    use Log::Stream::Parse::WebKDC;
+    my $path   = '/path/to/apache/error/log';
     my $stream = Log::Stream::File->new({ file => $path });
-    $stream = Log::Stream::Parsed::Apache::Error->new($stream);
+    $stream = Log::Stream::Parse::WebKDC->new($stream);
 
     # Read the next log record without consuming it.
     my $record = $stream->head;
@@ -119,14 +110,14 @@ Log::Stream::Parsed::Apache::Error - Stream parser for Apache error logs
 
 =head1 REQUIREMENTS
 
-Perl 5.10 or later and the Date::Parse module (available as part of the
-TimeDate distribution on CPAN) and Readonly mdule.
+Perl 5.10 or later and the Readonly module.
 
 =head1 DESCRIPTION
 
-Log::Stream::Parsed::Apache::Error provides a stream-based parser for
-Apache error logs.  Each record returned from the stream will be an
-anonymous hash with the following elements:
+Log::Stream::Parse::WebKDC provides a stream-based parser for WebKDC
+logs.  It expects an Apache error log as the underlying stream and ignores
+any lines that aren't from the WebKDC.  Each record returned from the
+stream will be an anonymous hash with the following elements:
 
 =over 4
 
@@ -139,18 +130,24 @@ same format as is returned by the Perl time function).
 
 The Apache log level of this line.
 
-=item client
+=item message
 
-The IP address of the client that provoked this message.  This key may not
-be present if no client information was available.
+A general message.  This key is only present if the log entry represents a
+general WebKDC error, trace, or debug message, and if it's present, only
+this key plus C<timestamp> and C<level> will be present.
 
-=item data
+=item event
 
-The rest of the log entry.
+Indicates that this log entry represents a WebKDC event.  The value will be
+one of the recognized WebKDC events, and the remaining keys in the hash will
+be the other keys and values from the WebKDC log message.  See the
+L<mod_webkdc manual|http://webauth.stanford.edu/manual/mod/mod_webkdc.html>
+for more information.
 
 =back
 
-Unparsable lines will be silently skipped.
+Unparsable lines or lines that aren't mod_webkdc log messages will be
+silently skipped.
 
 This object, and any classes derived from it, complies with the
 Log::Stream interface and can be wrapped in Log::Stream::Filter or
@@ -163,8 +160,8 @@ Log::Stream::Transform objects if desired.
 =item new(STREAM[, ARGS...])
 
 Create a new object wrapping the provided Log::Stream object.  The ARGS
-argument, if given, must be an anonymous hash.  The default constructor
-doesn't do anything with it, but subclasses might.
+argument, if given, must be a reference to a hash.  The default
+constructor doesn't do anything with it, but subclasses might.
 
 =back
 
@@ -182,11 +179,13 @@ the end of the stream.
 
 Returns the next log record without consuming it.  Repeated calls to
 head() without an intervening call to get() will keep returning the same
-record.  Returns undef at the end of the stream.
+record.  Returns undef at end of the stream.
 
 =item parse(LINE)
 
-Parses a single line of log and returns the results of the parse.
+Parses a single line of log and returns the results of the parse.  If a
+line could not be parsed, will return an empty anonymous hash (which will
+be edited out of the stream normally).
 
 =back
 
@@ -219,8 +218,8 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<Log::Stream>, L<Log::Stream::Filter>, L<Log::Stream::Parsed>,
-L<Log::Stream::Transform>
+L<Log::Stream>, L<Log::Stream::Parse>,
+L<Log::Stream::Parse::Apache::Error>, L<Log::Stream::Transform>
 
 Dominus, Mark Jason.  I<Higher Order Perl>.  San Francisco: Morgan
 Kaufmann Publishers, 2005.  Print.

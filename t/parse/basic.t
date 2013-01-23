@@ -20,7 +20,7 @@ use Test::More tests => 15;
 # Load the modules.
 BEGIN {
     use_ok('Log::Stream');
-    use_ok('Log::Stream::Parsed');
+    use_ok('Log::Stream::Parse');
 }
 
 # Build a trivial little stream.
@@ -30,13 +30,13 @@ my $stream = Log::Stream->new({ code => $code });
 isa_ok($stream, 'Log::Stream');
 
 # Wrap it in a parser object.
-$stream = eval { Log::Stream::Parsed->new($stream) };
+$stream = eval { Log::Stream::Parse->new($stream) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::Parsed');
+    isa_ok($stream, 'Log::Stream::Parse');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::Parsed object');
+    BAIL_OUT('cannot continue without Log::Stream::Parse object');
 }
 
 # Check the output.

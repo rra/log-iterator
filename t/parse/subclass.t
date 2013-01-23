@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Test the subclassing and filtering of Log::Stream::Parsed.
+# Test the subclassing and filtering of Log::Stream::Parse.
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -20,18 +20,18 @@ use Test::More tests => 11;
 # Load the modules.
 BEGIN {
     use_ok('Log::Stream');
-    use_ok('Log::Stream::Parsed');
+    use_ok('Log::Stream::Parse');
 }
 
-# Subclass Log::Stream::Parsed with something that returns references.
+# Subclass Log::Stream::Parse with something that returns references.
 ## no critic (Modules::ProhibitMultiplePackages)
-package Log::Stream::Parsed::Test;
-use base qw(Log::Stream::Parsed);
+package Log::Stream::Parse::Test;
+use base qw(Log::Stream::Parse);
 
 # Parser that returns the line it was passed in for first, the empty hash for
 # second, and a references to the line that was passed in for third.
 #
-# $self - Log::Stream::Parsed::Test object
+# $self - Log::Stream::Parse::Test object
 # $line - The line of input from the stream
 #
 # Returns: A reference to $line
@@ -53,13 +53,13 @@ my $stream = Log::Stream->new({ code => $code });
 isa_ok($stream, 'Log::Stream');
 
 # Create a new parser object.
-$stream = eval { Log::Stream::Parsed::Test->new($stream) };
+$stream = eval { Log::Stream::Parse::Test->new($stream) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::Parsed::Test');
+    isa_ok($stream, 'Log::Stream::Parse::Test');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::Parsed object');
+    BAIL_OUT('cannot continue without Log::Stream::Parse object');
 }
 
 # Check the output.  Emacs cperl-mode hates \'third'.

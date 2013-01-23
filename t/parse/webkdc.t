@@ -20,7 +20,7 @@ use Test::More tests => 15;
 # Load the module.
 BEGIN {
     use_ok('Log::Stream::File');
-    use_ok('Log::Stream::Parsed::WebKDC');
+    use_ok('Log::Stream::Parse::WebKDC');
 }
 
 # Open the test file as a stream.
@@ -32,13 +32,13 @@ my $stream = Log::Stream::File->new({ file => $path });
 isa_ok($stream, 'Log::Stream::File');
 
 # Wrap it in a parser object.
-$stream = eval { Log::Stream::Parsed::WebKDC->new($stream) };
+$stream = eval { Log::Stream::Parse::WebKDC->new($stream) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::Parsed::Apache::Error');
+    isa_ok($stream, 'Log::Stream::Parse::Apache::Error');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::Parsed object');
+    BAIL_OUT('cannot continue without Log::Stream::Parse object');
 }
 
 # Load the result file.  This sets @RESULT.

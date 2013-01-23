@@ -1,4 +1,4 @@
-# Log::Stream::Parsed -- Record-based log parser built on streams
+# Log::Stream::Parse -- Record-based log parser built on streams
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -8,7 +8,7 @@
 # Modules and declarations
 ##############################################################################
 
-package Log::Stream::Parsed;
+package Log::Stream::Parse;
 
 use 5.010;
 use autodie;
@@ -27,7 +27,7 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
-# Create a new Log::Stream::Parsed object wrapping the provided Log::Stream.
+# Create a new Log::Stream::Parse object wrapping the provided Log::Stream.
 # We set up both a transform and a filter, the latter to discard any lines
 # that parse into the empty hash.
 #
@@ -35,7 +35,7 @@ our $VERSION = '1.00';
 # $stream - The underlying Log::Stream object
 # $args   - Any additional arguments for the parser
 #
-# Returns: New Log::Stream::Parsed object
+# Returns: New Log::Stream::Parse object
 sub new {
     my ($class, $stream, $args) = @_;
 
@@ -69,7 +69,7 @@ sub new {
 
 # Simple log parser, meant to be overridden.
 #
-# $self - Log::Stream::Parsed object
+# $self - Log::Stream::Parse object
 # $line - The line to parse
 #
 # Returns: An anonymous hash with one key, data, whose value is the line
@@ -90,15 +90,15 @@ API Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses
 
 =head1 NAME
 
-Log::Stream::Parsed - Record-based log parser built on streams
+Log::Stream::Parse - Record-based log parser built on streams
 
 =head1 SYNOPSIS
 
     use Log::Stream::File;
-    use Log::Stream::Parsed;
+    use Log::Stream::Parse;
     my $path   = '/path/to/some/log';
     my $stream = Log::Stream::File->new({ file => $path });
-    $stream = Log::Stream::Parsed->new($stream);
+    $stream = Log::Stream::Parse->new($stream);
 
     # Read the next log record without consuming it.
     my $record = $stream->head;
@@ -112,7 +112,7 @@ Perl 5.10 or later.
 
 =head1 DESCRIPTION
 
-Log::Stream::Parsed provides an infrastructure for parsing logs based on
+Log::Stream::Parse provides an infrastructure for parsing logs based on
 infinite streams.  It is similar to Log::Stream except that it parses each
 log line and returns, rather than a text line, some kind of data structure
 representing that log record.
@@ -123,7 +123,7 @@ single key, C<data>, whose value is the entire line.  But subclasses can
 do arbitrarily complex parsing by overriding just the parse() method and
 using the rest of the infrastructure.
 
-Log::Stream::Parsed objects (and objects derived from it) are themselves
+Log::Stream::Parse objects (and objects derived from it) are themselves
 streams, and hence can be wrapped in Log::Stream::Filter or
 Log::Stream::Transform objects if desired.
 
@@ -136,9 +136,9 @@ underlying stream.
 
 =item new(STREAM[, ARGS])
 
-Create a new Log::Stream::Parsed object wrapping the provided Log::Stream
+Create a new Log::Stream::Parse object wrapping the provided Log::Stream
 object.  The ARGS argument, if given, must be a reference to a hash.  The
-default Log::Stream::Parsed constructor doesn't do anything with it, but
+default Log::Stream::Parse constructor doesn't do anything with it, but
 subclasses might.
 
 =back
