@@ -39,6 +39,7 @@ if ($stream) {
 open my $log, q{<}, $path;
 my @log_lines = <$log>;
 close $log;
+chomp @log_lines;
 for my $i (0 .. $#log_lines) {
     my $log_line = $log_lines[$i];
     is($stream->head, $log_line, "Head of line $i");

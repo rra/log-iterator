@@ -41,6 +41,7 @@ if ($stream) {
 open my $log, q{<}, $path;
 my @log_lines = <$log>;
 close $log;
+chomp @log_lines;
 for my $i (0 .. $#log_lines) {
     my $log_record = { data => $log_lines[$i] };
     is_deeply($stream->head, $log_record, "Head of line $i");

@@ -54,8 +54,8 @@ Readonly my $APACHE_ERROR_REGEX => qr{
       $TIMESTAMP_REGEX
       \s+ $LEVEL_REGEX
       (?: \s+ $CLIENT_REGEX )?
-      \s+ ([^\n]+)
-    \n \z
+      \s+ (.+)
+    \z
 }xms;
 
 ##############################################################################

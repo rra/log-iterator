@@ -38,13 +38,19 @@ sub new {
     my ($class, $args) = @_;
 
     # Ensure we were given a valid file argument and open it.
+    ## no critic (InputOutput::RequireBriefOpen)
     if (!defined $args->{file}) {
         croak('Missing file argument to new');
     }
     open my $fh, q{<}, $args->{file};
 
     # Construct and return the object.
-    my $code = sub { return $fh->getline };
+    my $code = sub {
+        my $line = $fh->getline;
+        return if !defined $line;
+        chomp $line;
+        return $line;
+    };
     return $class->SUPER::new({ code => $code });
 }
 
@@ -109,15 +115,16 @@ of the file to use as the data source for the stream.
 
 =item head()
 
-Returns the next line in the log stream without consuming it.  Repeated
-calls to head() without an intervening call to get() will keep returning
-the same line.  Returns undef at end of file.
+Returns the next line in the log stream without consuming it.  The
+trailing newline will be removed.  Repeated calls to head() without an
+intervening call to get() will keep returning the same line.  Returns
+undef at end of file.
 
 =item get()
 
-Returns the next line in the log stream and consumes it.  Repeated calls
-to get() will read through the entire file, returning each line once.
-Returns undef at end of file.
+Returns the next line in the log stream and consumes it.  The trailing
+newline will be removed.  Repeated calls to get() will read through the
+entire file, returning each line once.  Returns undef at end of file.
 
 =back
 
