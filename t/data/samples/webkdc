@@ -8,3 +8,6 @@ CANNOT BE PARSED (no timestamp)
 [Mon Jan 21 23:45:55] [error] CANNOT BE PARSED (bad date format)
 [Mon Jan 21 23:46:17 2013] [error] [client 192.168.0.45] FastCGI: server "/usr/share/weblogin/login.fcgi" stderr: no cookie, even after redirection
 [Mon Jan 21 23:46:37 2013] [error] mod_webkdc: parse_webkdc_proxy_token:webauth_token_decode failed: token has expired (token expired at 1358782550) (16)
+[Mon Jan 21 23:47:40 2013] [notice] mod_webkdc: event=requestToken from=127.0.0.1 clientIp=10.10.10.12 server=krb5:webauth/example.stanford.edu@stanford.edu url=https://example.stanford.edu/else user=otuser rtt=id sa=webkdc ifactors=p sfactors=c lec=0
+[Mon Jan 21 23:47:45 2013] [notice] mod_webkdc: event=requestToken from=127.0.0.1 server=krb5:webauth/example.stanford.edu@stanford.edu user=user2 errorCode=17 errorMessage="forced authentication, need to login"
+[Mon Jan 21 23:47:50 2013] [notice] mod_webkdc: event=requestToken from=127.0.0.1 clientIp=10.10.10.12 server=krb5:webauth/example.org@stanford.edu url=https://example.org/ user=user2 rtt=id sa=webkdc ro=fa login=password ifactors=p sfactors=p lec=0
