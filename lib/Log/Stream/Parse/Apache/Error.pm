@@ -96,8 +96,8 @@ sub parse {
 __END__
 
 =for stopwords
-API CPAN IP Kaufmann MERCHANTABILITY NONINFRINGEMENT TimeDate sublicense
-subclasses timestamp
+API CPAN IP Kaufmann MERCHANTABILITY NONINFRINGEMENT Readonly TimeDate
+sublicense subclasses timestamp
 
 =head1 NAME
 
@@ -120,7 +120,7 @@ Log::Stream::Parse::Apache::Error - Stream parser for Apache error logs
 =head1 REQUIREMENTS
 
 Perl 5.10 or later and the Date::Parse module (available as part of the
-TimeDate distribution on CPAN) and Readonly mdule.
+TimeDate distribution on CPAN) and Readonly module.
 
 =head1 DESCRIPTION
 

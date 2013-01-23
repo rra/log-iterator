@@ -88,7 +88,8 @@ sub parse {
 __END__
 
 =for stopwords
-Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses timestamp
+Kaufmann MERCHANTABILITY NONINFRINGEMENT Readonly sublicense subclasses
+timestamp
 
 =head1 NAME
 
