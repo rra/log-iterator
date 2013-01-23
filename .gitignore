@@ -6,3 +6,4 @@
 /blib/
 /cover_db/
 *.bak
+*.tar.gz
