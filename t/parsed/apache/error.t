@@ -15,7 +15,7 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 23;
+use Test::More tests => 21;
 
 # Load the module.
 BEGIN {

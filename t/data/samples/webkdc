@@ -1,8 +1,10 @@
+CANNOT BE PARSED (no timestamp)
 [Mon Jan 21 23:45:05 2013] [notice] FastCGI: process manager initialized (pid 23294)
 [Mon Jan 21 23:45:08 2013] [warn] FastCGI: (dynamic) server "/usr/share/weblogin/logout.fcgi" started (pid 23301)
 [Mon Jan 21 23:45:08 2013] [notice] mod_webkdc: event=getTokens from=10.10.10.10 server=krb5:webauth/webmail.stanford.edu@stanford.edu user=krb5:webauth/webmail.stanford.edu@stanford.edu type=service
 [Mon Jan 21 23:45:38 2013] [notice] mod_webkdc: event=requestToken from=127.0.0.1 clientIp=10.10.10.11 server=krb5:webauth/example.stanford.edu@stanford.edu url=https://example.stanford.edu/something user=<unknown> rtt=id sa=webkdc lec=15 lem="need a proxy token"
 [Mon Jan 21 23:45:40 2013] [notice] mod_webkdc: event=requestToken from=127.0.0.1 clientIp=10.10.10.11 server=krb5:webauth/example.stanford.edu@stanford.edu url=https://example.stanford.edu/something user=someuser rtt=id sa=webkdc login=password ifactors=p sfactors=p lec=0
 [Mon Jan 21 23:45:54 2013] CANNOT BE PARSED (no log level)
+[Mon Jan 21 23:45:55] [error] CANNOT BE PARSED (bad date format)
 [Mon Jan 21 23:46:17 2013] [error] [client 192.168.0.45] FastCGI: server "/usr/share/weblogin/login.fcgi" stderr: no cookie, even after redirection
 [Mon Jan 21 23:46:37 2013] [error] mod_webkdc: parse_webkdc_proxy_token:webauth_token_decode failed: token has expired (token expired at 1358782550) (16)

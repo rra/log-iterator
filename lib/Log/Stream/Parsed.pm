@@ -17,7 +17,8 @@ use warnings;
 
 use base qw(Log::Stream::Transform);
 
-use Log::Stream::File;
+use Log::Stream::Filter;
+use Scalar::Util qw(reftype);
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -27,6 +28,8 @@ our $VERSION = '1.00';
 ##############################################################################
 
 # Create a new Log::Stream::Parsed object wrapping the provided Log::Stream.
+# We set up both a transform and a filter, the latter to discard any lines
+# that parse into the empty hash.
 #
 # $class  - Class of the object being created
 # $stream - The underlying Log::Stream object
@@ -44,8 +47,23 @@ sub new {
     # subclasses that override parse().
     my $transform = sub { my ($line) = @_; return $self->parse($line) };
 
-    # Now, let Log::Stream::Transform do all the heavy lifting.
+    # Our filter discards any elements that are the empty hash.
+    my $filter = sub {
+        my ($element) = @_;
+        my $type = reftype($element);
+        if ($type && $type eq 'HASH' && keys %{$element} == 0) {
+            return 0;
+        } else {
+            return 1;
+        }
+    };
+
+    # Now, let Log::Stream::Transform and Log::Stream::Filter do all the heavy
+    # lifting.  The filter is on the outside, but we inherit from
+    # Log::Stream::Transform, so we have to reconsecrate the final object.
     $self = $class->SUPER::new($transform, $stream);
+    $self = Log::Stream::Filter->new($filter, $self);
+    bless $self, $class;
     return $self;
 }
 
@@ -150,6 +168,10 @@ commonly, it will be an anonymous hash containing the data from that line.
 This method is meant to be overridden by subclasses.  The default
 implementation just returns an anonymous hash with one key, C<data>, whose
 value is the entire line.
+
+This method should return the empty anonymous hash to indicate that the
+line could not be parsed.  Those lines will be silently omitted in the
+output of the parsed stream.
 
 =back
 
