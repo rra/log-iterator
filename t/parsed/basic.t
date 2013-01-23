@@ -19,7 +19,7 @@ use Test::More tests => 17;
 
 # Load the module.
 BEGIN {
-    use_ok('Log::Stream::Parser');
+    use_ok('Log::Stream::Parsed');
 }
 
 # Open the parsed log stream.
@@ -27,13 +27,13 @@ my $path = File::Spec->catfile(qw(t data samples syslog));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream = eval { Log::Stream::Parser->new($path) };
+my $stream = eval { Log::Stream::Parsed->new($path) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::Parser');
+    isa_ok($stream, 'Log::Stream::Parsed');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::Parser object');
+    BAIL_OUT('cannot continue without Log::Stream::Parsed object');
 }
 
 # Open the same test file manually and verify that we get the same results

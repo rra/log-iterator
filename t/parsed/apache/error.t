@@ -17,9 +17,9 @@ use File::Spec;
 
 use Test::More tests => 21;
 
-# Load the modules.
+# Load the module.
 BEGIN {
-    use_ok('Log::Stream::Parser::Apache::Error');
+    use_ok('Log::Stream::Parsed::Apache::Error');
 }
 
 # Open the parsed log stream.
@@ -27,13 +27,13 @@ my $path = File::Spec->catfile(qw(t data samples webkdc));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream = eval { Log::Stream::Parser::Apache::Error->new($path) };
+my $stream = eval { Log::Stream::Parsed::Apache::Error->new($path) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::Parser::Apache::Error');
+    isa_ok($stream, 'Log::Stream::Parsed::Apache::Error');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::Parser object');
+    BAIL_OUT('cannot continue without Log::Stream::Parsed object');
 }
 
 # Load the result file.  This sets @RESULT.

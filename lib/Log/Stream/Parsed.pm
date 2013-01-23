@@ -1,4 +1,4 @@
-# Log::Stream::Parser -- Record-based log parser built on streams
+# Log::Stream::Parsed -- Record-based log parser built on streams
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -8,7 +8,7 @@
 # Modules and declarations
 ##############################################################################
 
-package Log::Stream::Parser;
+package Log::Stream::Parsed;
 
 use 5.010;
 use autodie;
@@ -24,14 +24,14 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
-# Create a new Log::Stream::Parser object that creates a Log::Stream object
+# Create a new Log::Stream::Parsed object that creates a Log::Stream object
 # with the provided arguments and then applies the parse() method to each
 # element returned from the underlying stream.
 #
 # $class - Class of the object being created
 # @args  - Path to the file to associate with the stream
 #
-# Returns: New Log::Stream::Parser object
+# Returns: New Log::Stream::Parsed object
 sub new {
     my ($class, @args) = @_;
     my $stream = Log::Stream->new(@args);
@@ -55,7 +55,7 @@ sub new {
 
 # Simple log parser, meant to be overridden.
 #
-# $self - Log::Stream::Parser object
+# $self - Log::Stream::Parsed object
 # $line - The line to parse
 #
 # Returns: An anonymous hash with one key, data, whose value is the line
@@ -76,12 +76,12 @@ API Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses
 
 =head1 NAME
 
-Log::Stream::Parser - Record-based log parser built on streams
+Log::Stream::Parsed - Record-based log parser built on streams
 
 =head1 SYNOPSIS
 
-    use Log::Stream::Parser;
-    my $stream = Log::Stream::Parser->new('/path/to/some/log');
+    use Log::Stream::Parsed;
+    my $stream = Log::Stream::Parsed->new('/path/to/some/log');
 
     # Read the next log record without consuming it.
     my $record = $stream->head;
@@ -95,7 +95,7 @@ Perl 5.10 or later.
 
 =head1 DESCRIPTION
 
-Log::Stream::Parser provides an infrastructure for parsing logs based on
+Log::Stream::Parsed provides an infrastructure for parsing logs based on
 infinite streams.  It is similar to Log::Stream except that it parses each
 log line and returns, rather than a text line, some kind of data structure
 representing that log record.
@@ -106,8 +106,8 @@ single key, C<data>, whose value is the entire line.  But subclasses can
 do arbitrarily complex parsing by overriding just the parse() method and
 using the rest of the infrastructure.
 
-Log::Stream::Parser objects (and objects derived from it) are themselves
-streams, and hence can be wrapped in Log::Stream::Filter objects if
+Log::Stream::Parsed objects (and objects derived from it) are themselves
+streams, and hence can be wrapped in Log::Stream::Transform objects if
 desired.
 
 All methods may propagate autodie::exception exceptions from the

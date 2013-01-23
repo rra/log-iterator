@@ -1,4 +1,4 @@
-# Log::Stream::Parser::Apache::Error -- Stream parser for Apache error logs
+# Log::Stream::Parsed::Apache::Error -- Stream parser for Apache error logs
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -8,14 +8,14 @@
 # Modules and declarations
 ##############################################################################
 
-package Log::Stream::Parser::Apache::Error;
+package Log::Stream::Parsed::Apache::Error;
 
 use 5.010;
 use autodie;
 use strict;
 use warnings;
 
-use base qw(Log::Stream::Parser);
+use base qw(Log::Stream::Parsed);
 
 use Date::Parse ();
 use Readonly;
@@ -101,13 +101,13 @@ timestamp
 
 =head1 NAME
 
-Log::Stream::Parser::Apache::Error - Stream parser for Apache error logs
+Log::Stream::Parsed::Apache::Error - Stream parser for Apache error logs
 
 =head1 SYNOPSIS
 
-    use Log::Stream::Parser::Apache::Error;
+    use Log::Stream::Parsed::Apache::Error;
     my $path   = '/path/to/some/log';
-    my $stream = Log::Stream::Parser::Apache::Error->new($path);
+    my $stream = Log::Stream::Parsed::Apache::Error->new($path);
 
     # Read the next log record without consuming it.
     my $record = $stream->head;
@@ -121,7 +121,7 @@ Perl 5.10 or later.
 
 =head1 DESCRIPTION
 
-Log::Stream::Parser::Apache::Error provides a stream-based parser for
+Log::Stream::Parsed::Apache::Error provides a stream-based parser for
 Apache error logs.  Each record returned from the stream will be an
 anonymous hash with the following elements:
 
@@ -150,7 +150,7 @@ The rest of the log entry.
 If a line could not be parsed, the record will be an empty anonymous hash.
 
 This object, and any classes derived from it, complies with the Log::Stream
-interface and can be wrapped in Log::Stream::Filter objects if desired.
+interface and can be wrapped in Log::Stream::Transform objects if desired.
 
 All methods may propagate autodie::exception exceptions from the
 underlying stream.
@@ -221,7 +221,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<Log::Stream>, L<Log::Stream::Parser>, L<Log::Stream::Transform>
+L<Log::Stream>, L<Log::Stream::Parsed>, L<Log::Stream::Transform>
 
 Dominus, Mark Jason.  I<Higher Order Perl>.  San Francisco: Morgan
 Kaufmann Publishers, 2005.  Print.
