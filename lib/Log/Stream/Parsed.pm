@@ -17,6 +17,8 @@ use warnings;
 
 use base qw(Log::Stream::Transform);
 
+use Log::Stream::File;
+
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
@@ -24,32 +26,28 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
-# Create a new Log::Stream::Parsed object that creates a Log::Stream object
-# with the provided arguments and then applies the parse() method to each
-# element returned from the underlying stream.
+# Create a new Log::Stream::Parsed object that creates a Log::Stream::File
+# object with the provided arguments and then applies the parse() method to
+# each element returned from the underlying stream.
 #
 # $class - Class of the object being created
-# @args  - Path to the file to associate with the stream
+# $args  - Arguments to pass to the Log::Stream constructor
 #
 # Returns: New Log::Stream::Parsed object
 sub new {
-    my ($class, @args) = @_;
-    my $stream = Log::Stream->new(@args);
+    my ($class, $args) = @_;
+    my $stream = Log::Stream::File->new($args);
 
-    # Getting the variables set up so that $self is set properly in the
-    # transform for method look-up is tricky.  Create an object of our class
-    # so that we can find parse.
+    # Pre-create $self so that we can refer to it in the transform closure.
     my $self = {};
-    bless $self, $class;
+
+    # Delegate the stream transformation to our parse() method.  We set things
+    # up this way because it ensures method lookup will work properly for our
+    # subclasses that override parse().
     my $transform = sub { my ($line) = @_; return $self->parse($line) };
 
-    # Let Log::Stream::Transform do all the heavy lifting.  This will use the
-    # $self that we provide to read and transform the first line.  We then
-    # replace it with the new Log::Stream::Transform object.
+    # Now, let Log::Stream::Transform do all the heavy lifting.
     $self = $class->SUPER::new($transform, $stream);
-
-    # Reconsecreate and return our object.
-    bless $self, $class;
     return $self;
 }
 

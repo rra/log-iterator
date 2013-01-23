@@ -27,7 +27,8 @@ my $path = File::Spec->catfile(qw(t data samples webkdc));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream = eval { Log::Stream::Parsed::Apache::Error->new($path) };
+my $stream
+  = eval { Log::Stream::Parsed::Apache::Error->new({ file => $path }) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
     isa_ok($stream, 'Log::Stream::Parsed::Apache::Error');

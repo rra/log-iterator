@@ -1,4 +1,4 @@
-# Log::Stream -- Read a line-based log file as an infinite stream.
+# Log::Stream -- Parent class for logs as infinite streams.
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -15,6 +15,9 @@ use autodie;
 use strict;
 use warnings;
 
+use Carp qw(croak);
+use Scalar::Util ();
+
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
@@ -22,19 +25,30 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
-# Create a new Log::Stream object pointing to the provided file.
+# Create a new Log::Stream object from a code reference.  Child classes may
+# either reuse this by setting the code reference or override it entirely.
 #
 # $class - Class of the object being created
-# $file  - Path to the file to associate with the stream
+# $args  - Anonymous hash of arguments, with code as the only supported key
 #
 # Returns: New Log::Stream object
-#  Throws: autodie::exception object on I/O failure
+#  Throws: Text exceptions on invalid arguments
 sub new {
-    my ($class, $file) = @_;
-    open my $fh, q{<}, $file;
+    my ($class, $args) = @_;
+
+    # Ensure we were given a valid code argument.
+    if (!defined $args->{code}) {
+        croak('Missing code argument to new');
+    }
+    my $type = Scalar::Util::reftype($args->{code});
+    if (!$type || $type ne 'CODE') {
+        croak('code argument to new is not a code reference');
+    }
+
+    # Build and return the object.
     my $self = {
         head => undef,
-        tail => sub { return $fh->getline },
+        tail => $args->{code},
     };
     bless $self, $class;
     return $self;
@@ -100,12 +114,14 @@ Kaufmann MERCHANTABILITY NONINFRINGEMENT parsers sublicense
 
 =head1 NAME
 
-Log::Stream - Read a line-based log file as an infinite stream
+Log::Stream - Parent class for logs as infinite streams
 
 =head1 SYNOPSIS
 
     use Log::Stream;
-    my $stream = Log::Stream->new('/path/to/log');
+    my @data;
+    my $code = sub { return shift @data };
+    my $stream = Log::Stream->new({ code => $code });
 
     # Read a line without consuming it.
     my $line = $stream->head;
@@ -119,26 +135,27 @@ Perl 5.10 or later.
 
 =head1 DESCRIPTION
 
-Log::Stream provides an infinite stream interface to line-based log files
-such as normal UNIX syslog or application log files.  It is primarily a
-building block for more complex log parsers.  An infinite stream is
-similar to an iterator, but also supports looking at the next element
-without consuming it.
+Log::Stream provides an infinite stream interface to arbitrary data.  It's
+primarily intended as a superclass for reading log files and a building
+block for more complex log parsers, but it can be used as a generic stream
+object if desired.  An infinite stream is similar to an iterator, but also
+supports looking at the next element without consuming it.
 
 The stream operations are based loosely on the infinite streams discussed
 in I<Higher Order Perl> by Mark Jason Dominus, but are not based on the
 code from that book and use an object-oriented version of the interface.
 
-All methods may throw autodie::exception exceptions on I/O failure.
-
 =head1 CLASS METHODS
 
 =over 4
 
-=item new(FILE)
+=item new(ARGS)
 
-Open FILE and create a new Log::Stream object for it.  FILE will be closed
-once the end of the file is reached.
+Create a new Log::Stream object.  ARGS should be an anonymous hash with
+only one key: C<code>, whose value is a code reference to call to generate
+the next element in the stream.  When the code reference returns undef,
+that's the end of the stream, and all subsequent attempts to read from the
+stream will also return undef.
 
 =back
 
@@ -148,15 +165,30 @@ once the end of the file is reached.
 
 =item head()
 
-Returns the next line in the log stream without consuming it.  Repeated
+Returns the next element in the stream without consuming it.  Repeated
 calls to head() without an intervening call to get() will keep returning
-the same line.  Returns undef at end of file.
+the same line.  Returns undef at the end of the stream.
 
 =item get()
 
-Returns the next line in the log stream and consumes it.  Repeated calls
-to get() will read through the entire file, returning each line once.
-Returns undef at end of file.
+Returns the next element in the stream and consumes it.  Repeated calls to
+get() will read through the entire stream, returning each element once.
+Returns undef at the end of the stream.
+
+=back
+
+=head1 DIAGNOSTICS
+
+=over 4
+
+=item code argument to new is not a code reference
+
+(F) The value of the code key in the anonymous hash passed to new() is not
+a code reference.
+
+=item Missing code argument to new
+
+(F) The anonymous hash passed to new() did not contain a code key.
 
 =back
 

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Basic test for log parsing infrastructure.
+# Test for a simple file-based log stream.
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -15,25 +15,23 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 17;
+use Test::More tests => 19;
 
 # Load the module.
-BEGIN {
-    use_ok('Log::Stream::Parsed');
-}
+BEGIN { use_ok('Log::Stream::File') }
 
-# Open the parsed log stream.
+# Open the test data stream.
 my $path = File::Spec->catfile(qw(t data samples syslog));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream = eval { Log::Stream::Parsed->new({ file => $path }) };
-is($@, q{}, 'No exceptions on stream object creation');
+my $stream = eval { Log::Stream::File->new({ file => $path }) };
+is($@, q{}, 'No exceptions on object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::Parsed');
+    isa_ok($stream, 'Log::Stream::File');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::Parsed object');
+    BAIL_OUT('cannot continue without Log::Stream::File object');
 }
 
 # Open the same test file manually and verify that we get the same results
@@ -42,10 +40,16 @@ open my $log, q{<}, $path;
 my @log_lines = <$log>;
 close $log;
 for my $i (0 .. $#log_lines) {
-    my $log_record = { data => $log_lines[$i] };
-    is_deeply($stream->head, $log_record, "Head of line $i");
-    my $stream_record = $stream->get;
-    is_deeply($stream_record, $log_record, "Get of line $i");
+    my $log_line = $log_lines[$i];
+    is($stream->head, $log_line, "Head of line $i");
+    my $stream_line = $stream->get;
+    is($stream_line, $log_line, "Get of line $i");
 }
 is($stream->head, undef, 'Undef from head at end of file');
 is($stream->get,  undef, 'Undef from get at end of file');
+
+# Test error handling.
+$stream = eval { Log::Stream::File->new({}) };
+is($stream, undef, 'Creation failed without file argument');
+like($@, qr{ \A Missing [ ] file [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
+    '...error');

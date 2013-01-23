@@ -36,7 +36,7 @@ sub new {
     my ($class, $transform, $stream) = @_;
 
     # Wrap the provided transform in a sub that handles undef.
-    my $tail = sub {
+    my $code = sub {
         my $head = $stream->get;
         if (defined $head) {
             return $transform->($head);
@@ -46,12 +46,7 @@ sub new {
     };
 
     # Build and return the object.
-    my $self = {
-        head => undef,
-        tail => $tail,
-    };
-    bless $self, $class;
-    return $self;
+    return $class->SUPER::new({ code => $code });
 }
 
 ##############################################################################
@@ -95,19 +90,16 @@ Perl 5.10 or later.
 
 Log::Stream::Transform is used to wrap an arbitrary code filter around a
 Log::Stream object (or, for that matter, any other object that supports
-the head() and get() methods).  It runs an arbitrary user-provided
-transform operation on each record returned by the underlying stream and
-returns the results, whatever they are.  Note that Log::Stream::Transform
-objects can be used interchangeably with Log::Stream objects and support
-the same API, so one can stack multiple transforms on top of each other.
+the get() method).  It runs an arbitrary user-provided transform operation
+on each record returned by the underlying stream and returns the results,
+whatever they are.  Note that Log::Stream::Transform objects can be used
+interchangeably with Log::Stream objects and support the same API, so one
+can stack multiple transforms on top of each other.
 
 The transform operations is based loosely on the infinite streams
 discussed in I<Higher Order Perl> by Mark Jason Dominus, but is not based
 on the code from that book and uses an object-oriented version of the
 interface.
-
-All methods may propagate autodie::exception exceptions from the
-underlying stream.
 
 =head1 CLASS METHODS
 
@@ -117,8 +109,8 @@ underlying stream.
 
 Create a new stream that will be the results of calling CODE on each
 element returned by the stream STREAM.  STREAM is treated as a duck-typed
-stream, which means that it can be any object that supports the head()
-and get() methods with the expected stream semantics.
+stream, which means that it can be any object that supports the get()
+method with the expected stream semantics.
 
 =back
 
@@ -128,13 +120,13 @@ and get() methods with the expected stream semantics.
 
 =item head()
 
-Returns the next transformed record in the stream without consuming it.
+Returns the next transformed element in the stream without consuming it.
 Repeated calls to head() without an intervening call to get() will keep
-returning the same record.  Returns undef at end of file.
+returning the same record.  Returns undef at the end of the stream.
 
 =item get()
 
-Returns the next transformed record in the stream and consumes it.
+Returns the next transformed element in the stream and consumes it.
 Repeated calls to get() will read through the entire stream, returning
 each record once.  Returns undef at the end of the stream.
 
