@@ -16,7 +16,7 @@ use strict;
 use warnings;
 
 use Carp qw(croak);
-use Scalar::Util ();
+use Scalar::Util qw(reftype);
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -40,7 +40,7 @@ sub new {
     if (!defined $args->{code}) {
         croak('Missing code argument to new');
     }
-    my $type = Scalar::Util::reftype($args->{code});
+    my $type = reftype($args->{code});
     if (!$type || $type ne 'CODE') {
         croak('code argument to new is not a code reference');
     }
