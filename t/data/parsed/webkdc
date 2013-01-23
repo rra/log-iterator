@@ -1,0 +1,51 @@
+# -*- perl -*-
+#
+# Perl data structure representation of t/data/samples/webkdc when parsed by
+# the WebKDC parser.
+
+@RESULT = (
+    {
+        timestamp => 1358840708,
+        level     => 'notice',
+        event     => 'getTokens',
+        from      => '10.10.10.10',
+        server    => 'krb5:webauth/webmail.stanford.edu@stanford.edu',
+        user      => 'krb5:webauth/webmail.stanford.edu@stanford.edu',
+        type      => 'service',
+    },
+    {
+        timestamp => 1358840738,
+        level     => 'notice',
+        event     => 'requestToken',
+        from      => '127.0.0.1',
+        clientIp  => '10.10.10.11',
+        server    => 'krb5:webauth/example.stanford.edu@stanford.edu',
+        url       => 'https://example.stanford.edu/something',
+        user      => '<unknown>',
+        rtt       => 'id',
+        sa        => 'webkdc',
+        lec       => '15',
+        lem       => 'need a proxy token',
+    },
+    {
+        timestamp => 1358840740,
+        level     => 'notice',
+        event     => 'requestToken',
+        from      => '127.0.0.1',
+        clientIp  => '10.10.10.11',
+        server    => 'krb5:webauth/example.stanford.edu@stanford.edu',
+        url       => 'https://example.stanford.edu/something',
+        user      => 'someuser',
+        rtt       => 'id',
+        sa        => 'webkdc',
+        login     => 'password',
+        ifactors  => 'p',
+        sfactors  => 'p',
+        lec       => '0',
+    },
+    {
+        timestamp => 1358840797,
+        level     => 'error',
+        message   => 'parse_webkdc_proxy_token:webauth_token_decode failed: token has expired (token expired at 1358782550) (16)',
+    },
+);

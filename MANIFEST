@@ -4,11 +4,13 @@ lib/Log/Stream/File.pm
 lib/Log/Stream/Filter.pm
 lib/Log/Stream/Parsed.pm
 lib/Log/Stream/Parsed/Apache/Error.pm
+lib/Log/Stream/Parsed/WebKDC.pm
 lib/Log/Stream/Transform.pm
 Makefile.PL
 MANIFEST			This list of files
 META.json
 META.yml
+t/data/parsed/webkdc
 t/data/parsed/webkdc-apache
 t/data/perlcriticrc
 t/data/perltidyrc
@@ -21,6 +23,7 @@ t/docs/synopsis.t
 t/parsed/apache/error.t
 t/parsed/basic.t
 t/parsed/subclass.t
+t/parsed/webkdc.t
 t/stream/basic.t
 t/stream/file.t
 t/stream/filter.t
