@@ -47,7 +47,7 @@ sub new {
 
     # Build and return the object.
     my $self = {
-        head => $tail->(),
+        head => undef,
         tail => $tail,
     };
     bless $self, $class;
@@ -120,9 +120,6 @@ element returned by the stream STREAM.  STREAM is treated as a duck-typed
 stream, which means that it can be any object that supports the head()
 and get() methods with the expected stream semantics.
 
-CODE will be called immediately on the first element returned by STREAM
-to form the initial head record.
-
 =back
 
 =head1 INSTANCE METHODS
@@ -135,19 +132,11 @@ Returns the next transformed record in the stream without consuming it.
 Repeated calls to head() without an intervening call to get() will keep
 returning the same record.  Returns undef at end of file.
 
-head() will never call the transform code.  It returns data already
-transformed by either new() or get().
-
 =item get()
 
 Returns the next transformed record in the stream and consumes it.
 Repeated calls to get() will read through the entire stream, returning
 each record once.  Returns undef at the end of the stream.
-
-Note that before get() returns, it will call the transform code on the
-next item in the stream to generate the new head of the transformed
-stream.  Normally, this is transparent, but be aware of that sequence of
-operations when passing in transform code that may throw exceptions.
 
 =back
 

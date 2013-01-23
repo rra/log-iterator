@@ -122,9 +122,6 @@ underlying stream.
 Create a new underlying Log::Stream object and then build a parsed stream
 around it.  All arguments are passed as-is to the Log::Stream constructor.
 
-The first line of the underlying stream will be read and parsed
-immediately.
-
 =back
 
 =head1 INSTANCE METHODS
@@ -137,18 +134,11 @@ Returns the next record from the log and consumes it.  Repeated calls to
 get() will read through the entire log, returning each record once.
 Returns undef at the end of the stream.
 
-Note that before get() returns, it will call the parse code on the next
-line of the log to generate the new head record.  Normally, this is
-transparent, but be aware of that sequence of operations if the parse()
-method can throw exceptions.
-
 =item head()
 
 Returns the next log record without consuming it.  Repeated calls to
 head() without an intervening call to get() will keep returning the same
 record.  Returns undef at end of file.
-
-head() returns data already parsed by either new() or get().
 
 =item parse(LINE)
 

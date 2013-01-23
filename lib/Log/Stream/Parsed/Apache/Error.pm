@@ -165,9 +165,6 @@ Create a new underlying Log::Stream object and then build a parsed stream
 around it.  All arguments are passed as-is to the Log::Stream constructor.
 Generally, the only argument will be the path to the Apache error log.
 
-The first line of the underlying stream will be read and parsed
-immediately.
-
 =back
 
 =head1 INSTANCE METHODS

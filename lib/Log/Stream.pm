@@ -33,26 +33,48 @@ sub new {
     my ($class, $file) = @_;
     open my $fh, q{<}, $file;
     my $self = {
-        file => $fh,
-        head => $fh->getline,
+        head => undef,
         tail => sub { return $fh->getline },
     };
     bless $self, $class;
     return $self;
 }
 
-# Returns the next line in the stream without consuming it.
+# Internal helper function to set the head element.  This handles deferred
+# processing of head: if head is currently undef but tail is defined, calls
+# the tail function to generate the head element.  Also handles clearing the
+# tail function once it returns undef.
+#
+# $self - The Log::Stream object
+#
+# Returns: undef
+sub _set_head {
+    my ($self) = @_;
+    return if defined $self->{head};
+    return if !defined $self->{tail};
+    $self->{head} = $self->{tail}->();
+    if (!defined $self->{head}) {
+        $self->{tail} = undef;
+    }
+    return;
+}
+
+# Returns the next line in the stream without consuming it.  If head is undef,
+# that means we've not read the next line yet, so we internally use get() to
+# read it.
 #
 # $self - The Log::Stream object
 #
 # Returns: Current value of head
 sub head {
     my ($self) = @_;
+    $self->_set_head;
     return $self->{head};
 }
 
 # Returns the next line in the stream and consumes it.  The tail sub is asked
-# for the next head.
+# for the next head.  As soon as tail returns undef, we close the stream (by
+# setting tail to undef).
 #
 # $self - The Log::Stream object
 #
@@ -60,8 +82,9 @@ sub head {
 #  Throws: autodie::exception on I/O failure
 sub get {
     my ($self) = @_;
+    $self->_set_head;
     my $head = $self->{head};
-    $self->{head} = $self->{tail}->();
+    $self->{head} = undef;
     return $head;
 }
 
@@ -114,7 +137,8 @@ All methods may throw autodie::exception exceptions on I/O failure.
 
 =item new(FILE)
 
-Open FILE and create a new Log::Stream object for it.
+Open FILE and create a new Log::Stream object for it.  FILE will be closed
+once the end of the file is reached.
 
 =back
 
