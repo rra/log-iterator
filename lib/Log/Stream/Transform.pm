@@ -1,4 +1,4 @@
-# Log::Stream::Transform -- Filter an infinite log stream
+# Log::Stream::Transform -- Transform an infinite log stream
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -65,9 +65,10 @@ Log::Stream::Transform - Transform an infinite log stream
 
 =head1 SYNOPSIS
 
-    use Log::Stream;
+    use Log::Stream::File;
     use Log::Stream::Transform;
-    my $stream = Log::Stream->new('/path/to/some/log');
+    my $path   = '/path/to/some/log';
+    my $stream = Log::Stream::File->new({ file => $path });
 
     # Some arbitrary transform.
     my $code = sub {
@@ -76,7 +77,7 @@ Log::Stream::Transform - Transform an infinite log stream
     };
     $stream = Log::Stream::Transform->new($code, $stream);
 
-    # Read the next filtered line without consuming it.
+    # Read the next transformed line without consuming it.
     my $record = $stream->head;
 
     # The same, but consume it.
@@ -88,15 +89,15 @@ Perl 5.10 or later.
 
 =head1 DESCRIPTION
 
-Log::Stream::Transform is used to wrap an arbitrary code filter around a
-Log::Stream object (or, for that matter, any other object that supports
+Log::Stream::Transform is used to wrap an arbitrary code transform around
+a Log::Stream object (or, for that matter, any other object that supports
 the get() method).  It runs an arbitrary user-provided transform operation
-on each record returned by the underlying stream and returns the results,
+on each element returned by the underlying stream and returns the results,
 whatever they are.  Note that Log::Stream::Transform objects can be used
 interchangeably with Log::Stream objects and support the same API, so one
 can stack multiple transforms on top of each other.
 
-The transform operations is based loosely on the infinite streams
+The transform operation is based loosely on the infinite streams
 discussed in I<Higher Order Perl> by Mark Jason Dominus, but is not based
 on the code from that book and uses an object-oriented version of the
 interface.
@@ -161,7 +162,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<Log::Stream>
+L<Log::Stream>, L<Log::Stream::Filter>
 
 Dominus, Mark Jason.  I<Higher Order Perl>.  San Francisco: Morgan
 Kaufmann Publishers, 2005.  Print.

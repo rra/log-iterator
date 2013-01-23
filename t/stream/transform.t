@@ -32,7 +32,7 @@ isa_ok($stream, 'Log::Stream');
 # Now, build a trivial transform.
 my $transform = sub { my ($element) = @_; return uc $element };
 $stream = eval { Log::Stream::Transform->new($transform, $stream) };
-is($@, q{}, 'No exceptions on filter object creation');
+is($@, q{}, 'No exceptions on transform object creation');
 if ($stream) {
     isa_ok($stream, 'Log::Stream::Transform');
 } else {
