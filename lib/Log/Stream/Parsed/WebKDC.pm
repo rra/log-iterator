@@ -110,7 +110,7 @@ Log::Stream::Parsed::WebKDC - Stream parser for WebAuth WebKDC logs
 
 =head1 REQUIREMENTS
 
-Perl 5.10 or later.
+Perl 5.10 or later and the Readonly module.
 
 =head1 DESCRIPTION
 

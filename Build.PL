@@ -28,6 +28,7 @@ my $build = Module::Build->new(
     configure_requires => { 'Module::Build' => 0.28 },
     requires           => {
         'Date::Parse' => 0,
+        'Readonly'    => 0,
         perl          => '5.010',
     },
 );

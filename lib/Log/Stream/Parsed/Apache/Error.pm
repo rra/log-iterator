@@ -120,7 +120,7 @@ Log::Stream::Parsed::Apache::Error - Stream parser for Apache error logs
 =head1 REQUIREMENTS
 
 Perl 5.10 or later and the Date::Parse module (available as part of the
-TimeDate distribution on CPAN).
+TimeDate distribution on CPAN) and Readonly mdule.
 
 =head1 DESCRIPTION
 
