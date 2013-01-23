@@ -15,20 +15,24 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 21;
+use Test::More tests => 23;
 
 # Load the module.
 BEGIN {
+    use_ok('Log::Stream::File');
     use_ok('Log::Stream::Parsed::Apache::Error');
 }
 
-# Open the parsed log stream.
+# Open the test file as a stream.
 my $path = File::Spec->catfile(qw(t data samples webkdc));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream
-  = eval { Log::Stream::Parsed::Apache::Error->new({ file => $path }) };
+my $stream = Log::Stream::File->new({ file => $path });
+isa_ok($stream, 'Log::Stream::File');
+
+# Wrap it in a parser object.
+$stream = eval { Log::Stream::Parsed::Apache::Error->new($stream) };
 is($@, q{}, 'No exceptions on stream object creation');
 if ($stream) {
     isa_ok($stream, 'Log::Stream::Parsed::Apache::Error');

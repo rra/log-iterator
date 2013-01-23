@@ -26,17 +26,15 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
-# Create a new Log::Stream::Parsed object that creates a Log::Stream::File
-# object with the provided arguments and then applies the parse() method to
-# each element returned from the underlying stream.
+# Create a new Log::Stream::Parsed object wrapping the provided Log::Stream.
 #
-# $class - Class of the object being created
-# $args  - Arguments to pass to the Log::Stream constructor
+# $class  - Class of the object being created
+# $stream - The underlying Log::Stream object
+# $args   - Any additional arguments for the parser
 #
 # Returns: New Log::Stream::Parsed object
 sub new {
-    my ($class, $args) = @_;
-    my $stream = Log::Stream::File->new($args);
+    my ($class, $stream, $args) = @_;
 
     # Pre-create $self so that we can refer to it in the transform closure.
     my $self = {};
@@ -78,8 +76,11 @@ Log::Stream::Parsed - Record-based log parser built on streams
 
 =head1 SYNOPSIS
 
+    use Log::Stream::File;
     use Log::Stream::Parsed;
-    my $stream = Log::Stream::Parsed->new('/path/to/some/log');
+    my $path   = '/path/to/some/log';
+    my $stream = Log::Stream::File->new({ file => $path });
+    $stream = Log::Stream::Parsed->new($stream);
 
     # Read the next log record without consuming it.
     my $record = $stream->head;
@@ -115,10 +116,12 @@ underlying stream.
 
 =over 4
 
-=item new(ARGS...)
+=item new(STREAM[, ARGS])
 
-Create a new underlying Log::Stream object and then build a parsed stream
-around it.  All arguments are passed as-is to the Log::Stream constructor.
+Create a new Log::Stream::Parsed object wrapping the provided Log::Stream
+object.  The ARGS argument, if given, must be an anonymous hash.  The
+default Log::Stream::Parsed constructor doesn't do anything with it, but
+subclasses might.
 
 =back
 

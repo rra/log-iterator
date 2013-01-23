@@ -105,9 +105,11 @@ Log::Stream::Parsed::Apache::Error - Stream parser for Apache error logs
 
 =head1 SYNOPSIS
 
+    use Log::Stream::File;
     use Log::Stream::Parsed::Apache::Error;
     my $path   = '/path/to/some/log';
-    my $stream = Log::Stream::Parsed::Apache::Error->new($path);
+    my $stream = Log::Stream::File->new({ file => $path });
+    $stream = Log::Stream::Parsed::Apache::Error->new($stream);
 
     # Read the next log record without consuming it.
     my $record = $stream->head;
@@ -149,8 +151,9 @@ The rest of the log entry.
 
 If a line could not be parsed, the record will be an empty anonymous hash.
 
-This object, and any classes derived from it, complies with the Log::Stream
-interface and can be wrapped in Log::Stream::Transform objects if desired.
+This object, and any classes derived from it, complies with the
+Log::Stream interface and can be wrapped in Log::Stream::Transform objects
+if desired.
 
 All methods may propagate autodie::exception exceptions from the
 underlying stream.
@@ -161,9 +164,10 @@ underlying stream.
 
 =item new(ARGS...)
 
-Create a new underlying Log::Stream object and then build a parsed stream
-around it.  All arguments are passed as-is to the Log::Stream constructor.
-Generally, the only argument will be the path to the Apache error log.
+Create a new object wrapping the provided Log::Stream object.  The ARGS
+argument, if given, must be an anonymous hash.  The default
+Log::Stream::Parsed constructor doesn't do anything with it, but
+subclasses might.
 
 =back
 
