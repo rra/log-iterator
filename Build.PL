@@ -21,10 +21,15 @@ my $build = Module::Build->new(
     dist_abstract        => 'Stream-based log reading and parsing system',
     dist_author          => 'Russ Allbery <rra@stanford.edu>',
     license              => 'mit',
-    configure_requires   => { 'Module::Build' => 0.28 },
-    requires             => { perl => '5.010' },
     recursive_test_files => 1,
     create_makefile_pl   => 'traditional',
+
+    # Other package relationships.
+    configure_requires => { 'Module::Build' => 0.28 },
+    requires           => {
+        'Date::Parse' => 0,
+        perl          => '5.010',
+    },
 );
 
 # Generate the build script.
