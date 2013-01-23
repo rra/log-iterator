@@ -96,8 +96,8 @@ sub parse {
 __END__
 
 =for stopwords
-API IP Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses
-timestamp
+API CPAN IP Kaufmann MERCHANTABILITY NONINFRINGEMENT TimeDate sublicense
+subclasses timestamp
 
 =head1 NAME
 
@@ -150,25 +150,21 @@ The rest of the log entry.
 
 =back
 
-If a line could not be parsed, the record will be an empty anonymous hash.
+Unparsable lines will be silently skipped.
 
 This object, and any classes derived from it, complies with the
-Log::Stream interface and can be wrapped in Log::Stream::Transform objects
-if desired.
-
-All methods may propagate autodie::exception exceptions from the
-underlying stream.
+Log::Stream interface and can be wrapped in Log::Stream::Filter or
+Log::Stream::Transform objects if desired.
 
 =head1 CLASS METHODS
 
 =over 4
 
-=item new(ARGS...)
+=item new(STREAM[, ARGS...])
 
 Create a new object wrapping the provided Log::Stream object.  The ARGS
-argument, if given, must be an anonymous hash.  The default
-Log::Stream::Parsed constructor doesn't do anything with it, but
-subclasses might.
+argument, if given, must be an anonymous hash.  The default constructor
+doesn't do anything with it, but subclasses might.
 
 =back
 
@@ -178,15 +174,15 @@ subclasses might.
 
 =item get()
 
-Returns the next record from the log and consumes it.  Repeated calls to
-get() will read through the entire log, returning each record once.
-Returns undef at the end of the stream.
+Returns the next log record and consumes it.  Repeated calls to get() will
+read through the entire log, returning each record once.  Returns undef at
+the end of the stream.
 
 =item head()
 
 Returns the next log record without consuming it.  Repeated calls to
 head() without an intervening call to get() will keep returning the same
-record.  Returns undef at end of file.
+record.  Returns undef at the end of the stream.
 
 =item parse(LINE)
 
@@ -223,7 +219,8 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<Log::Stream>, L<Log::Stream::Parsed>, L<Log::Stream::Transform>
+L<Log::Stream>, L<Log::Stream::Filter>, L<Log::Stream::Parsed>,
+L<Log::Stream::Transform>
 
 Dominus, Mark Jason.  I<Higher Order Perl>.  San Francisco: Morgan
 Kaufmann Publishers, 2005.  Print.

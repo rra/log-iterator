@@ -124,8 +124,8 @@ do arbitrarily complex parsing by overriding just the parse() method and
 using the rest of the infrastructure.
 
 Log::Stream::Parsed objects (and objects derived from it) are themselves
-streams, and hence can be wrapped in Log::Stream::Transform objects if
-desired.
+streams, and hence can be wrapped in Log::Stream::Filter or
+Log::Stream::Transform objects if desired.
 
 All methods may propagate autodie::exception exceptions from the
 underlying stream.
@@ -137,7 +137,7 @@ underlying stream.
 =item new(STREAM[, ARGS])
 
 Create a new Log::Stream::Parsed object wrapping the provided Log::Stream
-object.  The ARGS argument, if given, must be an anonymous hash.  The
+object.  The ARGS argument, if given, must be a reference to a hash.  The
 default Log::Stream::Parsed constructor doesn't do anything with it, but
 subclasses might.
 
@@ -149,15 +149,15 @@ subclasses might.
 
 =item get()
 
-Returns the next record from the log and consumes it.  Repeated calls to
-get() will read through the entire log, returning each record once.
-Returns undef at the end of the stream.
+Returns the next log record and consumes it.  Repeated calls to get() will
+read through the entire log, returning each record once.  Returns undef at
+the end of the stream.
 
 =item head()
 
 Returns the next log record without consuming it.  Repeated calls to
 head() without an intervening call to get() will keep returning the same
-record.  Returns undef at end of file.
+record.  Returns undef at the end of the stream.
 
 =item parse(LINE)
 
@@ -204,7 +204,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<Log::Stream>, L<Log::Stream::Transform>
+L<Log::Stream>, L<Log::Stream::Filter>, L<Log::Stream::Transform>
 
 Dominus, Mark Jason.  I<Higher Order Perl>.  San Francisco: Morgan
 Kaufmann Publishers, 2005.  Print.
