@@ -1,4 +1,4 @@
-# Log::Stream::Transform -- Transform an infinite log stream
+# Log::Stream::Transform -- Transform an infinite log stream.
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
