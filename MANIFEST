@@ -2,6 +2,7 @@ Build.PL
 lib/Log/Stream.pm
 lib/Log/Stream/File.pm
 lib/Log/Stream/Filter.pm
+lib/Log/Stream/Merge.pm
 lib/Log/Stream/Parse.pm
 lib/Log/Stream/Parse/Apache/Combined.pm
 lib/Log/Stream/Parse/Apache/Error.pm
@@ -32,8 +33,10 @@ t/parse/webkdc.t
 t/stream/basic.t
 t/stream/file.t
 t/stream/filter.t
+t/stream/merge/basic.t
 t/stream/rewindable.t
 t/stream/transform.t
 t/style/critic.t
 t/style/minimum-version.t
 t/style/strict.t
+TODO
