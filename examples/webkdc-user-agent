@@ -154,14 +154,14 @@ if (!defined $access) {
 # Create the error log stream.  We stick a filter in front of it to ignore any
 # lines that don't contain lec=0 so that we don't go to the work of parsing
 # lines we know we won't care about.
-my $error_stream = Log::Stream::File->new({ file => $error });
+my $error_stream = Log::Stream::File->new({ files => $error });
 my $filter = sub { m{ \s lec=0 }xms };
 $error_stream = Log::Stream::Filter->new($filter, $error_stream);
 $error_stream = Log::Stream::Parse::WebKDC->new($error_stream);
 
 # Create the access log stream.  Similarly here we stick a filter in front to
 # ignore any lines that don't include the login URL.
-my $access_stream = Log::Stream::File->new({ file => $access });
+my $access_stream = Log::Stream::File->new({ files => $access });
 $filter = sub { m{ \s $LOGIN_URL_REGEX }xmso };
 $access_stream = Log::Stream::Filter->new($filter, $access_stream);
 $access_stream = Log::Stream::Parse::Apache::Combined->new($access_stream);
