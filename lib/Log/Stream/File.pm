@@ -26,10 +26,10 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
-# Create a new Log::Stream::File object pointing to the provided file.
+# Create a new Log::Stream::File object from the provided files.
 #
 # $class - Class of the object being created
-# $args  - Anonymous hash of arguments, with file as the only supported key
+# $args  - Anonymous hash of arguments, with files as the only supported key
 #
 # Returns: New Log::Stream::File object
 #  Throws: Text exception for invalid arguments
@@ -117,12 +117,11 @@ All methods may throw autodie::exception exceptions on I/O failure.
 
 =item new(ARGS)
 
-Open FILE and create a new Log::Stream::File object for it.  ARGS should
-be an anonymous hash with only one key: C<files>, whose value is either a
-single file name (as a string) or an anonymous array of files.  If
-multiple files are given, they will be read from in the order given,
-advancing to the next file once end of file is reached in the previous
-file.
+Create a new Log::Stream::File.  ARGS should be an anonymous hash with
+only one key: C<files>, whose value is either a single file name (as a
+string) or an anonymous array of files.  If multiple files are given, they
+will be read from in the order given, advancing to the next file once end
+of file is reached in the previous file.
 
 =back
 
@@ -135,13 +134,14 @@ file.
 Returns the next line in the log stream without consuming it.  The
 trailing newline will be removed.  Repeated calls to head() without an
 intervening call to get() will keep returning the same line.  Returns
-undef at end of file.
+undef at the end of all files.
 
 =item get()
 
 Returns the next line in the log stream and consumes it.  The trailing
 newline will be removed.  Repeated calls to get() will read through the
-entire file, returning each line once.  Returns undef at end of file.
+entire file, returning each line once.  Returns undef at the end of all
+files.
 
 =back
 
