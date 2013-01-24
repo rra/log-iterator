@@ -4,8 +4,8 @@ weblogin.stanford.edu:443 127.0.0.1 - - [21/Jan/2013:23:45:07 -0800] "GET / HTTP
 CANNOT BE PARSED (no valid data at all)
 10.10.10.10 - - [21/Jan/2013:23:45:08 -0800] "POST /webkdc-service/ HTTP/1.1" 200 5231 "-" "-"
 127.0.0.1 - - [21/Jan/2013:23:45:37 -0800] "POST /webkdc-service/ HTTP/1.1" 200 4991 "-" "libwww-perl/5.836"
-10.10.10.11 - - [21/Jan/2013:23:45:38 -0800] "GET /login/?RT=TOKEN;ST=TOKEN HTTP/1.1" 200 7882 "https://example.stanford.edu/something" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8) AppleWebKit/536.25 (KHTML, like Gecko) Version/6.0 Safari/536.25"
+10.10.10.11 - - [21/Jan/2013:23:45:40 -0800] "GET /login/?RT=TOKEN;ST=TOKEN HTTP/1.1" 200 7882 "https://example.stanford.edu/something" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8) AppleWebKit/536.25 (KHTML, like Gecko) Version/6.0 Safari/536.25"
 10.10.10.11 - - [21/Jan/2013:23:45:40 -0800] "GET /images/banner_bg.gif HTTP/1.1" 200 651 "https://weblogin.stanford.edu/login?RT=TOKEN;ST=TOKEN;test_cookie=1" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/536.26.17 (KHTML, like Gecko) Version/6.0.2 Safari/536.26.17"
-10.10.10.11 foo bar [22/Jan/2013:23:45:40 -0800] "GET /images/signature.gif HTTP/1.1" 200 3211 "https://weblogin.stanford.edu/login?RT=TOKEN;ST=TOKEN;test_cookie=1" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/536.26.17 (KHTML, like Gecko) Version/6.0.2 Safari/536.26.17"
+10.10.10.11 foo bar [21/Jan/2013:23:45:40 -0800] "GET /images/signature.gif HTTP/1.1" 200 3211 "https://weblogin.stanford.edu/login?RT=TOKEN;ST=TOKEN;test_cookie=1" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/536.26.17 (KHTML, like Gecko) Version/6.0.2 Safari/536.26.17"
 127.0.0.1 - - [21/Jan/2013:23:47:40 -0800] "/webkdc-service/" 200 4991 "-" "libwww-perl/5.836"
 10.10.10.12 - - [21/Jan/2013:23:47:52 -0800] "GET /login/?RT=TOKEN;ST=TOKEN HTTP/1.1" 200 7882 "https://example.org/" "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0)"
