@@ -23,8 +23,9 @@ use Test::More;
 use constant COVERAGE_LEVEL => 100;
 
 # Directories containing non-fuctional, generic tests to skip for test
-# coverage analysis.
-use constant COVERAGE_SKIP_TESTS => (qw(docs style));
+# coverage analysis.  Also skip the examples directory since Test::Script::Run
+# does not play well with coverage analysis.
+use constant COVERAGE_SKIP_TESTS => (qw(docs examples style));
 
 # Skip tests if Test::Strict is not installed.
 if (!eval { require Test::Strict }) {
