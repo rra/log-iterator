@@ -40,13 +40,13 @@ Readonly my $TIMEOUT => 2;
 # Find an entry in the error log stream that represents a successful login.
 # Then, try to find a corresponding entry in the access log with the same
 # timestamp or later, from the same client IP address, that matches the login
-# URL and was successful.  If we find one, extract the user agent and add it
-# to the entry from the error log stream.
+# URL and was successful.  If we find one, return the relevant data as our
+# output element from our stream.  Otherwise, ignore that entry and try again.
 #
 # $error  - Parsed Apache error log stream
 # $access - Parsed Apache access log stream
 #
-# Returns: Combined hash representing a login with possible user agent
+# Returns: A hash containing the timestamp, user, and user agent (user_agent)
 sub merge_user_agent {
     my ($error_stream, $access_stream) = @_;
 
@@ -80,15 +80,21 @@ sub merge_user_agent {
             next ACCESS
               if $access->{base_query} !~ m{ \A $LOGIN_URL_REGEX \z }xmso;
 
-            # We found a match.  Store the user agent data.
-            $entry->{user_agent} = $access->{user_agent};
+            # We found a match.  Create our output token.
+            my $result = {
+                timestamp  => $entry->{timestamp},
+                user       => $entry->{user},
+                user_agent => $access->{user_agent},
+            };
 
             # Push back the access log data except the entry we used.
             my @saved = $access_stream->saved;
             pop @saved;
             $access_stream->discard;
             $access_stream->prepend(@saved);
-            return $entry;
+
+            # Return our event.
+            return $result;
         }
 
         # We failed to find a match.  Discard this error log entry.
@@ -96,6 +102,25 @@ sub merge_user_agent {
     }
 
     # Fell off the end of the error log stream.  We're done.
+    return;
+}
+
+# Print values as CSV (RFC 4180) to standard output.
+#
+# @values - List of values to output
+#
+# Returns: undef
+#  Throws: Text exception on failure to print to standard output
+sub print_csv {
+    my @values = @_;
+    for my $value (@values) {
+        if ($value =~ m{ [\",] }xms) {
+            $value =~ s{ \" }{""}xmsg;
+            $value = qq{"$value"};
+        }
+    }
+    say {*STDOUT} join q{,}, @values
+      or die "Cannot write to standard output: $!\n";
     return;
 }
 
@@ -140,11 +165,11 @@ sub simple_agent {
 }
 
 # Parse command-line options.
-my $dump;
+my $csv;
 Getopt::Long::Configure('bundling', 'no_ignore_case');
 GetOptions(
     'browser-version!' => \$WANT_VERSION,
-    'd|dump'           => \$dump,
+    'c|csv'            => \$csv,
 ) or exit 1;
 my ($error, $access) = @ARGV;
 if (!defined $access) {
@@ -171,15 +196,11 @@ my $stream
   = Log::Stream::Merge::Rewindable->new(\&merge_user_agent, $error_stream,
     $access_stream);
 
-# If told to just dump entries, print out each entry from our stream.
-if ($dump) {
+# If told to just output CSV, print out each entry from our stream.
+if ($csv) {
+    print_csv(qw(timestamp user user_agent));
     while (my $entry = $stream->get) {
-        my $width = (max map { length $_ } keys %{$entry}) + 1;
-        for my $key (sort keys %{$entry}) {
-            printf {*STDOUT} "%-${width}s %s\n", $key . q{:}, $entry->{$key}
-              or die "Cannot print to standard output: $!\n";
-        }
-        print {*STDOUT} "\n" or die "Cannot print to standard output: $!\n";
+        print_csv($entry->{timestamp}, $entry->{user}, $entry->{user_agent});
     }
 }
 
