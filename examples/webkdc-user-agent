@@ -21,6 +21,7 @@ use List::Util qw(max reduce);
 use List::MoreUtils qw(apply mesh);
 use Log::Stream::File;
 use Log::Stream::File::Gzip;
+use Log::Stream::Merge;
 use Log::Stream::Merge::Rewindable;
 use Log::Stream::Parse::Apache::Combined;
 use Log::Stream::Parse::WebKDC;
