@@ -3,6 +3,7 @@ lib/Log/Stream.pm
 lib/Log/Stream/File.pm
 lib/Log/Stream/Filter.pm
 lib/Log/Stream/Merge.pm
+lib/Log/Stream/Merge/Rewindable.pm
 lib/Log/Stream/Parse.pm
 lib/Log/Stream/Parse/Apache/Combined.pm
 lib/Log/Stream/Parse/Apache/Error.pm
@@ -34,6 +35,7 @@ t/stream/basic.t
 t/stream/file.t
 t/stream/filter.t
 t/stream/merge/basic.t
+t/stream/merge/rewindable.t
 t/stream/rewindable.t
 t/stream/transform.t
 t/style/critic.t
