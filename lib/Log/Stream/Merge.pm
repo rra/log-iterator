@@ -32,7 +32,7 @@ our $VERSION = '1.00';
 # $code    - Optional code reference for the merge function
 # @streams - The underlying streams to merge
 #
-# Returns: New Log::Stream::Filter object
+# Returns: New Log::Stream::Merge object
 sub new {
     my ($class, $code, @streams) = @_;
 
