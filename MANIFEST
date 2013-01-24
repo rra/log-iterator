@@ -1,4 +1,5 @@
 Build.PL
+examples/webkdc-user-agent
 lib/Log/Stream.pm
 lib/Log/Stream/File.pm
 lib/Log/Stream/Filter.pm

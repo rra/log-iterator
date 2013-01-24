@@ -1,0 +1,165 @@
+#!/usr/bin/perl
+#
+# webkdc-user-agent -- Parse WebAuth WebKDC logs and generate User-Agent stats
+#
+# Correlate WebAuth WebKDC logs and Apache access logs to determine the user
+# agents of authenticated users.  From that, generate statistics showing how
+# many unique users use each user agent.
+#
+# Written by Russ Allbery <rra@stanford.edu>
+# Copyright 2013
+#     The Board of Trustees of the Leland Stanford Junior University
+
+use 5.010;
+use strict;
+use warnings;
+
+use Getopt::Long qw(GetOptions);
+use List::Util qw(max);
+use Log::Stream::File;
+use Log::Stream::Merge::Rewindable;
+use Log::Stream::Parse::Apache::Combined;
+use Log::Stream::Parse::WebKDC;
+use Readonly;
+
+# Regex matching URLs that may be used for WebAuth logins.  This could be
+# site-specific if one doesn't use the default recommended URL, but currently
+# isn't configurable without editing the script.
+Readonly my $LOGIN_URL_REGEX => qr{ /login/? }xms;
+
+# How many seconds after the error log entry to look for a corresponding
+# access log entry.  This bound will also bound our memory consumption.
+Readonly my $TIMEOUT => 2;
+
+# Our log merge routine.
+#
+# Find an entry in the error log stream that represents a successful login.
+# Then, try to find a corresponding entry in the access log with the same
+# timestamp or later, from the same client IP address, that matches the login
+# URL and was successful.  If we find one, extract the user agent and add it
+# to the entry from the error log stream.
+#
+# $error  - Parsed Apache error log stream
+# $access - Parsed Apache access log stream
+#
+# Returns: Combined hash representing a login with possible user agent
+sub merge_user_agent {
+    my ($error_stream, $access_stream) = @_;
+
+    # Search through the error log for something of interest.
+  ERROR:
+    while (my $entry = $error_stream->get) {
+        next ERROR if !$entry->{event} || $entry->{event} ne 'requestToken';
+        next ERROR if !defined($entry->{lec}) || $entry->{lec} != 0;
+        next ERROR if !defined $entry->{user};
+        next ERROR if !defined $entry->{clientIp};
+
+        # We found a login.  Stash some useful data.
+        my $client    = $entry->{clientIp};
+        my $timestamp = $entry->{timestamp};
+
+        # The access log entry will always be after the error log entry, so we
+        # can discard all access log entries with an older timestamp.
+        while (my $access = $access_stream->head) {
+            last if $access->{timestamp} >= $timestamp;
+            $access_stream->get;
+        }
+
+        # Now, search for an access log entry that matches.
+        $access_stream->bookmark;
+      ACCESS:
+        while (my $access = $access_stream->get) {
+            last ACCESS if $access->{timestamp} > $timestamp + $TIMEOUT;
+            next ACCESS if $access->{client} ne $client;
+            next ACCESS if !defined $access->{user_agent};
+            next ACCESS if !defined $access->{base_query};
+            next ACCESS
+              if $access->{base_query} !~ m{ \A $LOGIN_URL_REGEX \z }xmso;
+
+            # We found a match.  Store the user agent data.
+            $entry->{user_agent} = $access->{user_agent};
+
+            # Push back the access log data except the entry we used.
+            my @saved = $access_stream->saved;
+            pop @saved;
+            $access_stream->discard;
+            $access_stream->prepend(@saved);
+            return $entry;
+        }
+
+        # We failed to find a match.  Discard this error log entry.
+        $access_stream->rewind;
+    }
+
+    # Fell off the end of the error log stream.  We're done.
+    return;
+}
+
+# Parse command-line options.
+my ($dump);
+Getopt::Long::Configure('bundling', 'no_ignore_case');
+GetOptions('d|dump' => \$dump) or exit 1;
+my ($error, $access) = @ARGV;
+if (!defined $access) {
+    die "Usage: webkdc-user-agent [-d] <error> <access>\n";
+}
+
+# Create the error log stream.  We stick a filter in front of it to ignore any
+# lines that don't contain lec=0 so that we don't go to the work of parsing
+# lines we know we won't care about.
+my $error_stream = Log::Stream::File->new({ file => $error });
+my $filter = sub { m{ \s lec=0 }xms };
+$error_stream = Log::Stream::Filter->new($filter, $error_stream);
+$error_stream = Log::Stream::Parse::WebKDC->new($error_stream);
+
+# Create the access log stream.  Similarly here we stick a filter in front to
+# ignore any lines that don't include the login URL.
+my $access_stream = Log::Stream::File->new({ file => $access });
+$filter = sub { m{ \s $LOGIN_URL_REGEX }xmso };
+$access_stream = Log::Stream::Filter->new($filter, $access_stream);
+$access_stream = Log::Stream::Parse::Apache::Combined->new($access_stream);
+
+# Construct the merged log parser.
+my $stream
+  = Log::Stream::Merge::Rewindable->new(\&merge_user_agent, $error_stream,
+    $access_stream);
+
+# If told to just dump entries, print out each entry from our stream.
+if ($dump) {
+    while (my $entry = $stream->get) {
+        my $width = (max map { length $_ } keys %{$entry}) + 1;
+        for my $key (sort keys %{$entry}) {
+            printf {*STDOUT} "%-${width}s %s\n", $key . q{:}, $entry->{$key}
+              or die "Cannot print to standard output: $!\n";
+        }
+        print {*STDOUT} "\n" or die "Cannot print to standard output: $!\n";
+    }
+}
+
+# Otherwise, generate user agent statistics.
+else {
+    my %agents;
+
+    # For each user agent, store a hash of users who use that agent.
+    while (my $entry = $stream->get) {
+        $agents{ $entry->{user_agent} }{ $entry->{user} }++;
+    }
+
+    # Determine the maximum count of users.
+    my $max_count = max map { scalar keys $agents{$_} } keys %agents;
+
+    # The width for printing will be the log base 10 of that count.
+    my $width = int(log($max_count) / log(10)) + 1;
+
+    # Sort the user agents by descending count of users and print totals.
+    my $by_users = sub {
+        scalar keys %{ $agents{$b} } <=> scalar keys %{ $agents{$a} };
+    };
+    for my $agent (sort $by_users keys %agents) {
+        printf {*STDOUT} "%${width}d %s\n", scalar(keys $agents{$agent}),
+          $agent
+          or die "Cannot print to standard output: $!\n";
+    }
+}
+
+exit 0;
