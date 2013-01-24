@@ -15,12 +15,16 @@ use strict;
 use warnings;
 
 use Getopt::Long qw(GetOptions);
-use List::Util qw(max);
+use HTTP::BrowserDetect;
+use List::Util qw(max sum);
 use Log::Stream::File;
 use Log::Stream::Merge::Rewindable;
 use Log::Stream::Parse::Apache::Combined;
 use Log::Stream::Parse::WebKDC;
 use Readonly;
+
+# Whether we care about the browser version.  Default to yes.
+my $WANT_VERSION = 1;
 
 # Regex matching URLs that may be used for WebAuth logins.  This could be
 # site-specific if one doesn't use the default recommended URL, but currently
@@ -95,10 +99,53 @@ sub merge_user_agent {
     return;
 }
 
+# User agent mapping.  Take a user agent string and converts it into something
+# somewhat more sensible and with less useless information, namely:
+#
+#     <browser>/<major-version> (<device> | <os>)
+#
+# This will hopefully compress the plethora of different user agents into
+# something sensible.  Any component that couldn't be mapped is omitted.  When
+# all else fails, returns the original user agent string.
+#
+# $agent - User-Agent string
+#
+# Returns: Sensible user agent string as described above
+sub simple_agent {
+    my ($agent) = @_;
+    $agent = HTTP::BrowserDetect->new($agent);
+
+    # Gather information.
+    my $browser = $agent->browser_string;
+    my $version = $agent->public_version;
+    my $device  = $agent->device_name;
+    my $os      = $agent->os_string;
+
+    # Assemble the result.
+    my $result = q{};
+    if ($browser) {
+        $result .= $browser;
+        if ($WANT_VERSION && defined $version) {
+            $result .= q{/} . $version;
+        }
+    } else {
+        $result .= 'UNKNOWN';
+    }
+    if ($device) {
+        $result .= " ($device)";
+    } elsif ($os) {
+        $result .= " ($os)";
+    }
+    return $result;
+}
+
 # Parse command-line options.
-my ($dump);
+my $dump;
 Getopt::Long::Configure('bundling', 'no_ignore_case');
-GetOptions('d|dump' => \$dump) or exit 1;
+GetOptions(
+    'browser-version!' => \$WANT_VERSION,
+    'd|dump'           => \$dump,
+) or exit 1;
 my ($error, $access) = @ARGV;
 if (!defined $access) {
     die "Usage: webkdc-user-agent [-d] <error> <access>\n";
@@ -142,24 +189,41 @@ else {
 
     # For each user agent, store a hash of users who use that agent.
     while (my $entry = $stream->get) {
-        $agents{ $entry->{user_agent} }{ $entry->{user} }++;
+        my $agent = simple_agent($entry->{user_agent});
+        my $user  = $entry->{user};
+        $agents{$agent}{$user}++;
     }
 
-    # Determine the maximum count of users.
-    my $max_count = max map { scalar keys $agents{$_} } keys %agents;
+    # Determine the maximum count of users for a given user agent.
+    my @counts      = map { scalar keys $agents{$_} } keys %agents;
+    my $max_count   = max @counts;
+    my $total_count = sum 0, @counts;
 
-    # The width for printing will be the log base 10 of that count.
+    # The width for printing will be the log base 10 of the max count.
     my $width = int(log($max_count) / log(10)) + 1;
+
+    # Determine the total number of unique users.  This isn't just the sum
+    # of the counts, since some users will use multiple devices.
+    my %users;
+    for my $agent (keys %agents) {
+        for my $user (keys %{ $agents{$agent} }) {
+            $users{$user}++;
+        }
+    }
+    my $user_count = scalar keys %users;
 
     # Sort the user agents by descending count of users and print totals.
     my $by_users = sub {
         scalar keys %{ $agents{$b} } <=> scalar keys %{ $agents{$a} };
     };
     for my $agent (sort $by_users keys %agents) {
-        printf {*STDOUT} "%${width}d %s\n", scalar(keys $agents{$agent}),
-          $agent
+        my $count = scalar keys $agents{$agent};
+        printf {*STDOUT} "%${width}d %4.1f%% %s\n", $count,
+          ($count / $user_count) * 100, $agent
           or die "Cannot print to standard output: $!\n";
     }
+    say "\nTotal unique users: $user_count"
+      or die "Cannot print to standard output: $!\n";
 }
 
 exit 0;
