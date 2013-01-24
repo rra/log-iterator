@@ -16,6 +16,8 @@ use warnings;
 
 use base qw(Log::Stream::Merge);
 
+use Log::Stream::Rewindable;
+
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
