@@ -29,14 +29,17 @@ Readonly my $PAIR_REGEX => qr{
     =
     (?:                                 # two possible value types
       ( [^\"\s]* )                      #   unquoted value
+      (?: \s+ | \z )                    #   trailing whitespace or end
       |
-      \" ( (?:                          #   quoted value
+      \"                                #   open quote
+      ( (?>                             #   quoted value
         \\.                             #     backslash escapes anything
         |
         [^\\\"]                         #     any other character
-      )* ) \"                           #   end of quote
+      )* )
+      \"                                #   end of quote
+      (?: \s+ | \z )                    #   trailing whitespace or end
     )
-    (?: \s+ | \z )                      # trailing whitespace or end of string
 }xms;
 
 ##############################################################################
@@ -69,7 +72,7 @@ sub parse {
     # See if this is an event.  If not, set message.  If so, parse it.
     if ($data =~ s{ \A event = (\S+) \s+ }{}xms) {
         $result->{event} = $1;
-        while ($data =~ m{ \G $PAIR_REGEX }gxms) {
+        while ($data =~ m{ \G $PAIR_REGEX }goxms) {
             my $key = $1;
             my $value = defined $2 ? $2 : $3;
             $result->{$key} = $value;

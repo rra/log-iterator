@@ -17,27 +17,33 @@ use warnings;
 
 use base qw(Log::Stream::Parse);
 
-use Date::Parse ();
+use Date::Parse qw(str2time);
+use Memoize;
 use Readonly;
+
+# Memoize str2time, which is otherwise painfully slow.
+memoize('str2time');
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
 # Components of an Apache access log.
 Readonly my $VHOST_REGEX  => qr{ (?: ( [\w._:-]+ ) \s )?      }xms;
-Readonly my $CLIENT_REGEX => qr{ ( [\d.]+ )                   }xms;
+Readonly my $CLIENT_REGEX => qr{ ( [[:xdigit:].:]+ )          }xms;
 Readonly my $USER_REGEX   => qr{ ( \S+ )                      }xms;
 Readonly my $TIME_REGEX   => qr{ \[ ( [^\]]+ ) \]             }xms;
-Readonly my $STRING_REGEX => qr{ \" ( (?: \\. | [^\"] )+ ) \" }xms;
+Readonly my $STRING_REGEX => qr{ \" ( (?> \\. | [^\"] )+ ) \" }xms;
 
 # Regex to match a single line of Apache access log output.
 Readonly my $APACHE_ACCESS_REGEX => qr{
     \A
-    $VHOST_REGEX                # optional virtual host (1)
-    $CLIENT_REGEX               # client IP address (2)
-    \s $USER_REGEX              # authentication information (3)
-    \s $USER_REGEX              # ident information (4)
-    \s $TIME_REGEX              # timestamp (5)
+    (?>
+      $VHOST_REGEX              # optional virtual host (1)
+      $CLIENT_REGEX             # client IP address (2)
+      \s $USER_REGEX            # authentication information (3)
+      \s $USER_REGEX            # ident information (4)
+      \s $TIME_REGEX            # timestamp (5)
+    )                           # stop backtracking once we find timestamp
     \s $STRING_REGEX            # query (6)
     \s ( \d+ )                  # HTTP status (7)
     \s ( \d+ )                  # size (8)
@@ -51,8 +57,8 @@ Readonly my $APACHE_ACCESS_REGEX => qr{
 # Regex to parse the query string.
 Readonly my $QUERY_STRING_REGEX => qr{
     \A
-    ( [[:upper:]]+ ) \s+        # method (1)
-    ( .*? )                     # query itself (2)
+    (?> ( [[:upper:]]+ ) \s+ )  # method (1)
+    ( \S+ )                     # query itself (2)
     (?: \s+ ( HTTP/[\d.]+ ) )?  # optional protocol (3)
     \z
 }xms;
@@ -70,7 +76,7 @@ Readonly my $QUERY_STRING_REGEX => qr{
 # Returns: The corresponding data structure or an empty hash on parse failure
 sub parse {
     my ($self, $line) = @_;
-    if ($line =~ $APACHE_ACCESS_REGEX) {
+    if ($line =~ m{ $APACHE_ACCESS_REGEX }oxms) {
         my (
             $vhost,     $client,       $user,   $ident_user,
             $timestamp, $query_string, $status, $size,
@@ -78,7 +84,7 @@ sub parse {
         ) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
         # Flesh out the basic information.
-        $timestamp = Date::Parse::str2time($timestamp);
+        $timestamp = str2time($timestamp);
         my $result = {
             timestamp => $timestamp,
             client    => $client,
@@ -107,7 +113,7 @@ sub parse {
 
         # Parse the query string.
         $query_string =~ s{ \\ (.) }{$1}gxms;
-        if ($query_string =~ $QUERY_STRING_REGEX) {
+        if ($query_string =~ m{ $QUERY_STRING_REGEX }oxms) {
             my ($method, $query, $protocol) = ($1, $2, $3);
             my $base_query = $query;
             $base_query =~ s{ [?] .* }{}xms;

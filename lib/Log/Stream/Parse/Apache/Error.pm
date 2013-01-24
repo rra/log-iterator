@@ -17,8 +17,12 @@ use warnings;
 
 use base qw(Log::Stream::Parse);
 
-use Date::Parse ();
+use Date::Parse qw(str2time);
+use Memoize;
 use Readonly;
+
+# Memoize str2time, which is otherwise painfully slow.
+memoize('str2time');
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -53,7 +57,7 @@ Readonly my $APACHE_ERROR_REGEX => qr{
     \A
       $TIMESTAMP_REGEX
       \s+ $LEVEL_REGEX
-      (?: \s+ $CLIENT_REGEX )?
+      (?> \s+ $CLIENT_REGEX )?
       \s+ (.+)
     \z
 }xms;
@@ -71,9 +75,9 @@ Readonly my $APACHE_ERROR_REGEX => qr{
 # Returns: The corresponding data structure or an empty hash on parse failure
 sub parse {
     my ($self, $line) = @_;
-    if ($line =~ $APACHE_ERROR_REGEX) {
+    if ($line =~ m{ $APACHE_ERROR_REGEX }oxms) {
         my ($timestamp, $level, $client, $data) = ($1, $2, $3, $4);
-        $timestamp = Date::Parse::str2time($timestamp);
+        $timestamp = str2time($timestamp);
         my $result = {
             timestamp => $timestamp,
             level     => $level,
