@@ -1,0 +1,43 @@
+                          Log::Stream To-Do List
+
+Design:
+
+ * Should the tail function perhaps be accessible or modifiable?  The
+   various decorators such as ::Filter and ::Transform could rewrite the
+   tail function instead of wrapping the stream, which would make the code
+   more like Dominus's original design and would probably be faster, since
+   it would avoid a lot of method calls.
+
+General:
+
+ * Test the stream parameters to all constructors to ensure that they
+   support get().  (And head() if required.)
+
+Documentation:
+
+ * Remove the stock descriptions of head() and get() from all of the
+   streams and refer to Log::Stream's documentation instead.
+
+Style:
+
+ * Clean up the body of Log::Stream::Parse::Apache::Combined's parse
+   method.  Do something table-driven to handle the attributes, pull the
+   quoted string cleanup into a separate method, or something.
+
+ * Clean up all the unnecessary use autodie that has been copied and
+   pasted into the various modules and test cases.
+
+Testing:
+
+ * Factor out the tests for parse modules into a library that loads the
+   appropriate module, input, and result set and then runs through the
+   parse and compares to the expected results.  Determine the plan
+   automatically based on the size of the results.
+
+ * Factor out the first stream creation and error checking into a library.
+
+ * Find examples of Apache and WebKDC logs with backslashes in quoted
+   strings and add them to the test suite.
+
+ * Fix the spelling test to not use my personal aspell dictionary so that
+   we have a complete set of appropriate stopwords.
