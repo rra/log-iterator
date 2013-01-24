@@ -39,6 +39,7 @@ sub new {
     my $code = sub {
         my $head = $stream->get;
         if (defined $head) {
+            local $_ = $head;
             return $transform->($head);
         } else {
             return;
@@ -71,10 +72,7 @@ Log::Stream::Transform - Transform an infinite log stream
     my $stream = Log::Stream::File->new({ file => $path });
 
     # Some arbitrary transform.
-    my $code = sub {
-        my ($line) = @_;
-        return [split q{ }, $line];
-    };
+    my $code = sub { [split q{ }, $_] };
     $stream = Log::Stream::Transform->new($code, $stream);
 
     # Read the next transformed line without consuming it.
@@ -112,6 +110,9 @@ Create a new stream that will be the results of calling CODE on each
 element returned by the stream STREAM.  STREAM is treated as a duck-typed
 stream, which means that it can be any object that supports the get()
 method with the expected stream semantics.
+
+While calling CODE, $_ will also be set to the element of the STREAM as
+a convenience.
 
 =back
 

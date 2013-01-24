@@ -29,8 +29,14 @@ my $code   = sub { return shift @data };
 my $stream = Log::Stream->new({ code => $code });
 isa_ok($stream, 'Log::Stream');
 
-# Now, build a trivial transform.
-my $transform = sub { my ($element) = @_; return uc $element };
+# Now, build a trivial transform (and also check $_ is set).
+my $transform = sub {
+    my ($element) = @_;
+    if ($element ne $_) {
+        die "\$_ not properly set\n";
+    }
+    return uc $element;
+};
 $stream = eval { Log::Stream::Transform->new($transform, $stream) };
 is($@, q{}, 'No exceptions on transform object creation');
 if ($stream) {

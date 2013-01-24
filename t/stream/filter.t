@@ -29,8 +29,14 @@ my $code   = sub { return shift @data };
 my $stream = Log::Stream->new({ code => $code });
 isa_ok($stream, 'Log::Stream');
 
-# Now, build a trivial filter.
-my $filter = sub { my ($element) = @_; return scalar $element =~ m{d}xms };
+# Now, build a trivial filter (and also check $_ is set).
+my $filter = sub {
+    my ($element) = @_;
+    if ($element ne $_) {
+        die "$_ not properly set\n";
+    }
+    return scalar $element =~ m{d}xms;
+};
 $stream = eval { Log::Stream::Filter->new($filter, $stream) };
 is($@, q{}, 'No exceptions on filter object creation');
 if ($stream) {

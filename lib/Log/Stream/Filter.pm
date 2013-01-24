@@ -42,6 +42,7 @@ sub new {
       ELEMENT: {
             $head = $stream->get;
             return if !defined $head;
+            local $_ = $head;
             redo ELEMENT if !$filter->($head);
         }
         return $head;
@@ -71,10 +72,7 @@ Log::Stream::Filter - Filter an infinite log stream
     my $stream; # some existing stream
 
     # Filter out lines of 40 characters or less.
-    my $code = sub {
-        my ($line) = @_;
-        return length($line) > 40;
-    };
+    my $code = sub { length($_) > 40 };
     $stream = Log::Stream::Filter->new($code, $stream);
 
     # Read the next filtered line without consuming it.
@@ -115,6 +113,9 @@ STREAM as its argument, and only those elements for which CODE returns
 true will be passed on.  STREAM is treated as a duck-typed stream, which
 means that it can be any object that supports the get() method with the
 expected stream semantics.
+
+While calling CODE, $_ will also be set to the element of the STREAM as
+a convenience.
 
 =back
 
