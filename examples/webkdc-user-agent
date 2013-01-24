@@ -242,7 +242,7 @@ sub build_archive_stream {
             s{ [.] error [.] gz \z }{.access.gz}xms;
             return $_;
         };
-        my @error_logs  = @{$logs};
+        my @error_logs  = sort @{$logs};
         my @access_logs = apply { $access_log_for->() } @error_logs;
         push @log_streams, build_log_stream(\@error_logs, \@access_logs);
     }
