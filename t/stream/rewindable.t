@@ -13,7 +13,7 @@ use autodie;
 use strict;
 use warnings;
 
-use Test::More tests => 70;
+use Test::More tests => 74;
 
 # Load the modules.
 BEGIN {
@@ -151,3 +151,9 @@ is_deeply([$stream->saved], [], '...and there are no saved elements');
 is($stream->get, 'third', 'Third get() is third');
 ok($stream->rewind, 'Rewind successful');
 is($stream->head, 'third', '...and returns to the second bookmark');
+
+# Try prepending nothing with an empty head.
+is($stream->get, 'third', 'get() returns third');
+ok($stream->prepend(), 'Prepend of nothing succeeds');
+is($stream->head, 'fourth', 'Head is now fourth');
+is($stream->get,  'fourth', '...and get() returns fourth');

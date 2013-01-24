@@ -125,9 +125,11 @@ sub prepend {
         $self->{head} = undef;
     }
 
-    # Put the elements into the queue.
-    $self->{queue} ||= [];
-    push @{ $self->{queue} }, reverse @elements;
+    # Put the elements into the queue if we have any.
+    if (@elements > 0) {
+        $self->{queue} ||= [];
+        push @{ $self->{queue} }, reverse @elements;
+    }
 
     # If the stream was empty, we destroyed the tail.  Rebuild it.
     if (!defined $self->{tail}) {
