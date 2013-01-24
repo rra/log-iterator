@@ -26,6 +26,12 @@ if (!eval { require File::Slurp }) {
 if (!eval { require HTTP::BrowserDetect }) {
     plan skip_all => 'HTTP::BrowserDetect required for test';
 }
+if (!eval { require List::MoreUtils }) {
+    plan skip_all => 'List::MoreUtils required for test';
+}
+if (!eval { require Text::CSV }) {
+    plan skip_all => 'Text::CSV required for test';
+}
 if (!eval { require Test::Script::Run }) {
     plan skip_all => 'Test::Script::Run required for test';
 
@@ -36,7 +42,7 @@ File::Slurp->import;
 Test::Script::Run->import;
 
 # It's now safe to present a plan.
-plan tests => 2;
+plan tests => 3;
 
 # Our script is found in the examples directory.
 local @Test::Script::Run::BIN_DIRS = qw(examples);
@@ -60,4 +66,8 @@ my $report = File::Spec->catfile(qw(t data output webkdc-user-agent));
 @expected = read_file($report);
 chomp @expected;
 run_output_matches('webkdc-user-agent', [$webkdc, $access],
+    [@expected], q{}, 'webkdc-user-agent report');
+
+# Test reporting using the CSV file as input.
+run_output_matches('webkdc-user-agent', ['-i', $csv_output],
     [@expected], q{}, 'webkdc-user-agent report');

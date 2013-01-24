@@ -17,11 +17,13 @@ use warnings;
 use Getopt::Long qw(GetOptions);
 use HTTP::BrowserDetect;
 use List::Util qw(max sum);
+use List::MoreUtils qw(mesh);
 use Log::Stream::File;
 use Log::Stream::Merge::Rewindable;
 use Log::Stream::Parse::Apache::Combined;
 use Log::Stream::Parse::WebKDC;
 use Readonly;
+use Text::CSV;
 
 # Whether we care about the browser version.  Default to yes.
 my $WANT_VERSION = 1;
@@ -105,6 +107,80 @@ sub merge_user_agent {
     return;
 }
 
+# Build a stream of authenticated user agents from input CSV data (that we
+# probably wrote out previously).
+#
+# $csv_file - Input file of CSV data
+#
+# Returns: Stream of authenticated user agents
+sub build_csv_stream {
+    my ($csv_file) = @_;
+
+    # Create a CSV parser.
+    my $csv = Text::CSV->new;
+
+    # Build a stream from the input file.
+    my $csv_stream = Log::Stream::File->new({ files => $csv_file });
+
+    # The first line will be the field names.
+    if (!$csv->parse($csv_stream->get)) {
+        die "First line of $csv_file is invalid\n";
+    }
+    my @fields = $csv->fields;
+
+    # Now, create a parser for that stream.
+    my $parser = sub {
+        my ($line) = @_;
+        if (!$csv->parse($line)) {
+            die "Cannot parse line: $line\n";
+        }
+        my @values = $csv->fields;
+        if (scalar(@values) != scalar @fields) {
+            die "Incorrect number of fields on line: $line\n";
+        }
+        return { mesh @fields, @values };
+    };
+
+    # Wrap the stream in that parser and return it.
+    my $stream = Log::Stream::Transform->new($parser, $csv_stream);
+    return $stream;
+}
+
+# Build our stream of authenticated user agents.  Takes two sets of files: a
+# reference to an array of error logs and a reference to an array of access
+# logs.  These must be from the same machine so they will correlate properly
+# and won't move around in time.
+#
+# $error_files  - Reference to array of Apache error logs
+# $access_files - Reference to array of Apache access logs
+#
+# Returns: Stream of authenticated user agents
+sub build_log_stream {
+    my ($error_files, $access_files) = @_;
+
+    # Create the error log stream.  We stick a filter in front of it to ignore
+    # any lines that don't contain lec=0 so that we don't go to the work of
+    # parsing lines we know we won't care about.  (This plus the same for
+    # access logs saves about 40% of the running time.)
+    my $error_stream = Log::Stream::File->new({ files => $error_files });
+    my $filter = sub { m{ \s lec=0 }xms };
+    $error_stream = Log::Stream::Filter->new($filter, $error_stream);
+    $error_stream = Log::Stream::Parse::WebKDC->new($error_stream);
+
+    # Create the access log stream.  Similarly here we stick a filter in front
+    # to ignore any lines that don't include the login URL.
+    my $access_stream = Log::Stream::File->new({ files => $access_files });
+    $filter = sub { m{ \s $LOGIN_URL_REGEX }xmso };
+    $access_stream = Log::Stream::Filter->new($filter, $access_stream);
+    $access_stream = Log::Stream::Parse::Apache::Combined->new($access_stream);
+
+    # Construct the merged log parser.
+    my $stream
+      = Log::Stream::Merge::Rewindable->new(\&merge_user_agent, $error_stream,
+        $access_stream);
+    return $stream;
+}
+
 # Print values as CSV (RFC 4180) to standard output.
 #
 # @values - List of values to output
@@ -165,36 +241,31 @@ sub simple_agent {
 }
 
 # Parse command-line options.
-my $csv;
+my ($csv, $input);
 Getopt::Long::Configure('bundling', 'no_ignore_case');
 GetOptions(
     'browser-version!' => \$WANT_VERSION,
     'c|csv'            => \$csv,
+    'i|input=s'        => \$input,
 ) or exit 1;
-my ($error, $access) = @ARGV;
-if (!defined $access) {
-    die "Usage: webkdc-user-agent [-d] <error> <access>\n";
+
+# If given an input file, read it as CSV data.
+my $stream;
+if (defined $input) {
+    if (@ARGV) {
+        die "Usage: webkdc-user-agent -i <input>\n";
+    }
+    $stream = build_csv_stream($input);
 }
 
-# Create the error log stream.  We stick a filter in front of it to ignore any
-# lines that don't contain lec=0 so that we don't go to the work of parsing
-# lines we know we won't care about.
-my $error_stream = Log::Stream::File->new({ files => $error });
-my $filter = sub { m{ \s lec=0 }xms };
-$error_stream = Log::Stream::Filter->new($filter, $error_stream);
-$error_stream = Log::Stream::Parse::WebKDC->new($error_stream);
-
-# Create the access log stream.  Similarly here we stick a filter in front to
-# ignore any lines that don't include the login URL.
-my $access_stream = Log::Stream::File->new({ files => $access });
-$filter = sub { m{ \s $LOGIN_URL_REGEX }xmso };
-$access_stream = Log::Stream::Filter->new($filter, $access_stream);
-$access_stream = Log::Stream::Parse::Apache::Combined->new($access_stream);
-
-# Construct the merged log parser.
-my $stream
-  = Log::Stream::Merge::Rewindable->new(\&merge_user_agent, $error_stream,
-    $access_stream);
+# Otherwise, expect log files on the command line and build a stream from them.
+else {
+    my ($error, $access) = @ARGV;
+    if (!defined $access) {
+        die "Usage: webkdc-user-agent [-d] <error> <access>\n";
+    }
+    $stream = build_log_stream([$error], [$access]);
+}
 
 # If told to just output CSV, print out each entry from our stream.
 if ($csv) {
