@@ -2,6 +2,7 @@ Build.PL
 examples/webkdc-user-agent
 lib/Log/Stream.pm
 lib/Log/Stream/File.pm
+lib/Log/Stream/File/Gzip.pm
 lib/Log/Stream/Filter.pm
 lib/Log/Stream/Merge.pm
 lib/Log/Stream/Merge/Rewindable.pm
@@ -21,7 +22,9 @@ t/data/parsed/webkdc-apache
 t/data/perlcriticrc
 t/data/perltidyrc
 t/data/samples/apache
+t/data/samples/empty.gz
 t/data/samples/syslog
+t/data/samples/syslog.gz
 t/data/samples/webkdc
 t/docs/pod-coverage.t
 t/docs/pod-spelling.t
@@ -34,6 +37,7 @@ t/parse/subclass.t
 t/parse/webkdc.t
 t/stream/basic.t
 t/stream/file.t
+t/stream/file/gzip.t
 t/stream/filter.t
 t/stream/merge.t
 t/stream/merge/rewindable.t
