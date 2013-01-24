@@ -100,13 +100,13 @@ Log::Stream::Parse::WebKDC - Stream parser for WebAuth WebKDC logs
 
 =head1 SYNOPSIS
 
-    use Log::Stream::File;
     use Log::Stream::Parse::WebKDC;
-    my $path   = '/path/to/apache/error/log';
-    my $stream = Log::Stream::File->new({ file => $path });
+    my $stream; # some existing stream
+
+    # Parse the stream as WebKDC log entries.
     $stream = Log::Stream::Parse::WebKDC->new($stream);
 
-    # Read the next log record without consuming it.
+    # Read the next log entry without consuming it.
     my $record = $stream->head;
 
     # The same, but consume it.
@@ -120,8 +120,8 @@ Perl 5.10 or later and the Readonly module.
 
 Log::Stream::Parse::WebKDC provides a stream-based parser for WebKDC
 logs.  It expects an Apache error log as the underlying stream and ignores
-any lines that aren't from the WebKDC.  Each record returned from the
-stream will be an anonymous hash with the following elements:
+any lines that aren't from the WebKDC.  Each element returned from the
+stream will be an anonymous hash with the following keys:
 
 =over 4
 
@@ -132,7 +132,7 @@ same format as is returned by the Perl time function).
 
 =item level
 
-The Apache log level of this line.
+The Apache log level of this entry.
 
 =item message
 
@@ -175,19 +175,19 @@ constructor doesn't do anything with it, but subclasses might.
 
 =item get()
 
-Returns the next log record and consumes it.  Repeated calls to get() will
-read through the entire log, returning each record once.  Returns undef at
+Returns the next log entry and consumes it.  Repeated calls to get() will
+read through the entire log, returning each entry once.  Returns undef at
 the end of the stream.
 
 =item head()
 
-Returns the next log record without consuming it.  Repeated calls to
+Returns the next log entry without consuming it.  Repeated calls to
 head() without an intervening call to get() will keep returning the same
-record.  Returns undef at end of the stream.
+entry.  Returns undef at end of the stream.
 
 =item parse(LINE)
 
-Parses a single line of log and returns the results of the parse.  If a
+Parses a single log entry and returns the results of the parse.  If a
 line could not be parsed, will return an empty anonymous hash (which will
 be edited out of the stream normally).
 
@@ -222,7 +222,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<Log::Stream>, L<Log::Stream::Parse>,
+L<Log::Stream>, L<Log::Stream::Filter>, L<Log::Stream::Parse>,
 L<Log::Stream::Parse::Apache::Error>, L<Log::Stream::Transform>
 
 Dominus, Mark Jason.  I<Higher Order Perl>.  San Francisco: Morgan

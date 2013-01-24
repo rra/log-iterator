@@ -66,10 +66,8 @@ Log::Stream::Transform - Transform an infinite log stream
 
 =head1 SYNOPSIS
 
-    use Log::Stream::File;
     use Log::Stream::Transform;
-    my $path   = '/path/to/some/log';
-    my $stream = Log::Stream::File->new({ file => $path });
+    my $stream; # some existing stream
 
     # Some arbitrary transform.
     my $code = sub { [split q{ }, $_] };

@@ -1,4 +1,4 @@
-# Log::Stream::File -- Read a line-based log file as an infinite stream.
+# Log::Stream::File -- Read a line-based log file as an infinite stream
 #
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
@@ -37,20 +37,34 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $args) = @_;
 
-    # Ensure we were given a valid file argument and open it.
+    # Ensure we were given a valid files argument and open the first file.
     ## no critic (InputOutput::RequireBriefOpen)
-    if (!defined $args->{file}) {
-        croak('Missing file argument to new');
+    if (!defined $args->{files}) {
+        croak('Missing files argument to new');
     }
-    open my $fh, q{<}, $args->{file};
+    my @files = ref $args->{files} ? @{ $args->{files} } : ($args->{files});
+    if (!@files) {
+        croak('Empty files argument to new');
+    }
+    open my $fh, q{<}, shift @files;
 
-    # Construct and return the object.
+    # Our generator code reads from each file in turn until hitting end of
+    # file and then opens the next one.
     my $code = sub {
-        my $line = $fh->getline;
-        return if !defined $line;
+        my $line;
+      LINE: {
+            $line = $fh->getline;
+            if (!defined $line) {
+                return if !@files;
+                open $fh, q{<}, shift @files;
+                redo LINE;
+            }
+        }
         chomp $line;
         return $line;
     };
+
+    # Construct and return the object.
     return $class->SUPER::new({ code => $code });
 }
 
@@ -71,7 +85,7 @@ Log::Stream::File - Read a line-based log file as an infinite stream
 =head1 SYNOPSIS
 
     use Log::Stream::File;
-    my $stream = Log::Stream::File->new({ file => '/path/to/log' });
+    my $stream = Log::Stream::File->new({ files => '/path/to/log' });
 
     # Read a line without consuming it.
     my $line = $stream->head;
@@ -104,8 +118,11 @@ All methods may throw autodie::exception exceptions on I/O failure.
 =item new(ARGS)
 
 Open FILE and create a new Log::Stream::File object for it.  ARGS should
-be an anonymous hash with only one key: C<file>, whose value is the name
-of the file to use as the data source for the stream.
+be an anonymous hash with only one key: C<files>, whose value is either a
+single file name (as a string) or an anonymous array of files.  If
+multiple files are given, they will be read from in the order given,
+advancing to the next file once end of file is reached in the previous
+file.
 
 =back
 
@@ -132,9 +149,13 @@ entire file, returning each line once.  Returns undef at end of file.
 
 =over 4
 
-=item Missing file argument to new
+=item Empty files argument to new
 
-(F) The anonymous hash passed to new() did not contain a file key.
+(F) The argument to the C<files> key was an empty list of files.
+
+=item Missing files argument to new
+
+(F) The anonymous hash passed to new() did not contain a C<files> key.
 
 =back
 

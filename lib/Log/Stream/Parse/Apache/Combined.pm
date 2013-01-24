@@ -150,10 +150,10 @@ Log::Stream::Parse::Apache::Combined - Stream parser for Apache logs
 
 =head1 SYNOPSIS
 
-    use Log::Stream::File;
     use Log::Stream::Parse::Apache::Combined;
-    my $path   = '/path/to/some/log';
-    my $stream = Log::Stream::File->new({ file => $path });
+    my $stream; # some existing stream
+
+    # Parse the stream as Apache combined log entries.
     $stream = Log::Stream::Parse::Apache::Combined->new($stream);
 
     # Read the next log record without consuming it.
@@ -170,8 +170,8 @@ TimeDate distribution on CPAN) and Readonly module.
 =head1 DESCRIPTION
 
 Log::Stream::Parse::Apache::Combined provides a stream-based parser for
-Apache access logs in the combined format.  Each record returned from the
-stream will be an anonymous hash with the following elements:
+Apache access logs in the combined format.  Each element returned from the
+stream will be an anonymous hash with the following keys:
 
 =over 4
 
@@ -269,19 +269,21 @@ doesn't do anything with it, but subclasses might.
 
 =item get()
 
-Returns the next log record and consumes it.  Repeated calls to get() will
-read through the entire log, returning each record once.  Returns undef at
+Returns the next log entry and consumes it.  Repeated calls to get() will
+read through the entire log, returning each entry once.  Returns undef at
 the end of the stream.
 
 =item head()
 
-Returns the next log record without consuming it.  Repeated calls to
+Returns the next log entry without consuming it.  Repeated calls to
 head() without an intervening call to get() will keep returning the same
-record.  Returns undef at the end of the stream.
+entry.  Returns undef at the end of the stream.
 
 =item parse(LINE)
 
-Parses a single line of log and returns the results of the parse.
+Parses a single line of log and returns the results of the parse.  If a
+line could not be parsed, will return an empty anonymous hash (which will
+be edited out of the stream normally).
 
 =back
 

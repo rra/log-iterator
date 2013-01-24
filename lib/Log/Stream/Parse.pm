@@ -94,10 +94,10 @@ Log::Stream::Parse - Record-based log parser built on streams
 
 =head1 SYNOPSIS
 
-    use Log::Stream::File;
     use Log::Stream::Parse;
-    my $path   = '/path/to/some/log';
-    my $stream = Log::Stream::File->new({ file => $path });
+    my $stream; # some existing stream
+
+    # Wrap stream in a parser.
     $stream = Log::Stream::Parse->new($stream);
 
     # Read the next log record without consuming it.
@@ -126,9 +126,6 @@ using the rest of the infrastructure.
 Log::Stream::Parse objects (and objects derived from it) are themselves
 streams, and hence can be wrapped in Log::Stream::Filter or
 Log::Stream::Transform objects if desired.
-
-All methods may propagate autodie::exception exceptions from the
-underlying stream.
 
 =head1 CLASS METHODS
 

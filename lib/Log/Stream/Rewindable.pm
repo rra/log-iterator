@@ -187,10 +187,8 @@ Log::Stream::Rewindable - Make an infinite log stream partly rewindable
 
 =head1 SYNOPSIS
 
-    use Log::Stream::File;
     use Log::Stream::Rewindable;
-    my $path   = '/path/to/some/log';
-    my $stream = Log::Stream::File->new({ file => $path });
+    my $stream; # some existing stream
 
     # Wrap the stream to make it rewindable.
     $stream = Log::Stream::Rewindable->new($stream);

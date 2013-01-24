@@ -15,7 +15,7 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 19;
+use Test::More tests => 47;
 
 # Load the module.
 BEGIN { use_ok('Log::Stream::File') }
@@ -25,7 +25,7 @@ my $path = File::Spec->catfile(qw(t data samples syslog));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream = eval { Log::Stream::File->new({ file => $path }) };
+my $stream = eval { Log::Stream::File->new({ files => $path }) };
 is($@, q{}, 'No exceptions on object creation');
 if ($stream) {
     isa_ok($stream, 'Log::Stream::File');
@@ -43,14 +43,28 @@ chomp @log_lines;
 for my $i (0 .. $#log_lines) {
     my $log_line = $log_lines[$i];
     is($stream->head, $log_line, "Head of line $i");
-    my $stream_line = $stream->get;
-    is($stream_line, $log_line, "Get of line $i");
+    is($stream->get,  $log_line, "Get of line $i");
+}
+is($stream->head, undef, 'Undef from head at end of file');
+is($stream->get,  undef, 'Undef from get at end of file');
+
+# Test handling multiple files by opening the same file twice.
+$stream = Log::Stream::File->new({ files => [$path, $path] });
+@log_lines = (@log_lines, @log_lines);
+for my $i (0 .. $#log_lines) {
+    my $log_line = $log_lines[$i];
+    is($stream->head, $log_line, "Head of line $i");
+    is($stream->get,  $log_line, "Get of line $i");
 }
 is($stream->head, undef, 'Undef from head at end of file');
 is($stream->get,  undef, 'Undef from get at end of file');
 
 # Test error handling.
 $stream = eval { Log::Stream::File->new({}) };
-is($stream, undef, 'Creation failed without file argument');
-like($@, qr{ \A Missing [ ] file [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
+is($stream, undef, 'Creation failed without files argument');
+like($@, qr{ \A Missing [ ] files [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
+    '...error');
+$stream = eval { Log::Stream::File->new({ files => [] }) };
+is($stream, undef, 'Creation failed empty files argument');
+like($@, qr{ \A Empty [ ] files [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
     '...error');

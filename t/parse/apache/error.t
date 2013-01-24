@@ -28,7 +28,7 @@ my $path = File::Spec->catfile(qw(t data samples webkdc));
 if (!-r $path) {
     BAIL_OUT("cannot find test data: $path");
 }
-my $stream = Log::Stream::File->new({ file => $path });
+my $stream = Log::Stream::File->new({ files => $path });
 isa_ok($stream, 'Log::Stream::File');
 
 # Wrap it in a parser object.
