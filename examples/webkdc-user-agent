@@ -14,14 +14,17 @@ use 5.010;
 use strict;
 use warnings;
 
+use File::Find qw(find);
 use Getopt::Long qw(GetOptions);
 use HTTP::BrowserDetect;
-use List::Util qw(max sum);
-use List::MoreUtils qw(mesh);
+use List::Util qw(max reduce);
+use List::MoreUtils qw(apply mesh);
 use Log::Stream::File;
+use Log::Stream::File::Gzip;
 use Log::Stream::Merge::Rewindable;
 use Log::Stream::Parse::Apache::Combined;
 use Log::Stream::Parse::WebKDC;
+use Log::Stream::Transform;
 use Readonly;
 use Text::CSV;
 
@@ -142,14 +145,17 @@ sub build_csv_stream {
     };
 
     # Wrap the stream in that parser and return it.
-    my $stream = Log::Stream::Transform->new($parser, $csv_stream);
-    return $stream;
+    return Log::Stream::Transform->new($parser, $csv_stream);
 }
 
 # Build our stream of authenticated user agents.  Takes two sets of files: a
 # reference to an array of error logs and a reference to an array of access
 # logs.  These must be from the same machine so they will correlate properly
 # and won't move around in time.
+#
+# Decide whether the log files are compressed based on the first element of
+# each array.  We can improve this later with more brains in the
+# Log::Stream::File classes.
 #
 # $error_files  - Reference to array of Apache error logs
 # $access_files - Reference to array of Apache access logs
@@ -158,27 +164,102 @@ sub build_csv_stream {
 sub build_log_stream {
     my ($error_files, $access_files) = @_;
 
+    # Determine what file stream class to use.
+    my $is_gzip = $error_files->[0] =~ m{ \.gz \z }xms;
+    my $class = $is_gzip ? 'Log::Stream::File::Gzip' : 'Log::Stream::File';
+
     # Create the error log stream.  We stick a filter in front of it to ignore
     # any lines that don't contain lec=0 so that we don't go to the work of
     # parsing lines we know we won't care about.  (This plus the same for
     # access logs saves about 40% of the running time.)
-    my $error_stream = Log::Stream::File->new({ files => $error_files });
+    my $error_stream = $class->new({ files => $error_files });
     my $filter = sub { m{ \s lec=0 }xms };
     $error_stream = Log::Stream::Filter->new($filter, $error_stream);
     $error_stream = Log::Stream::Parse::WebKDC->new($error_stream);
 
     # Create the access log stream.  Similarly here we stick a filter in front
     # to ignore any lines that don't include the login URL.
-    my $access_stream = Log::Stream::File->new({ files => $access_files });
+    my $access_stream = $class->new({ files => $access_files });
     $filter = sub { m{ \s $LOGIN_URL_REGEX }xmso };
     $access_stream = Log::Stream::Filter->new($filter, $access_stream);
     $access_stream = Log::Stream::Parse::Apache::Combined->new($access_stream);
 
     # Construct the merged log parser.
-    my $stream
-      = Log::Stream::Merge::Rewindable->new(\&merge_user_agent, $error_stream,
-        $access_stream);
-    return $stream;
+    return Log::Stream::Merge::Rewindable->new(\&merge_user_agent,
+        $error_stream, $access_stream);
+}
+
+# Build a stream from archived logs.
+#
+# This layout is probably specific to Stanford.  Our arguments will be one or
+# more directories.  Under those directories (possibly recursively) will be
+# logs, which will be named in the format:
+#
+#     <machine>.<type>.gz
+#
+# Now, for our purposes, we want to build a single stream of all the error and
+# access logs for a particular machine found in our search area, but we do not
+# want to mingle streams from different machines.  If we do that, we'll lose
+# the synchronization between error log and access log.
+#
+# Therefore, we find all of the machines for which we have pairs of logs, and
+# build individual log streams per machine.  Then, we'll merge all of those
+# together, sorted by timestamp, for our actual processing.
+#
+# @directories - Root directories under which to find logs
+#
+# Returns: Stream of authenticated user agents
+sub build_archive_stream {
+    my (@directories) = @_;
+
+    # Find appropriately-named logs in the directories.  We cheat a little
+    # here and only find error logs, and then reject any error logs that don't
+    # have corresponding access logs.
+    my %logs_for;
+    my $wanted = sub {
+        return if !-f $_;
+
+        # Ensure this is an error log and there is a matching access log.
+        my $machine;
+        if (m{ \A ([^.]+) [.] error [.] gz \z }xms) {
+            $machine = $1;
+        } else {
+            return;
+        }
+        return if !-f "$machine.access.gz";
+
+        # Found a good log pair.  Add it to %logs_for by machine.
+        $logs_for{$machine} ||= [];
+        push @{ $logs_for{$machine} }, $File::Find::name;
+    };
+    find($wanted, @directories);
+
+    # Now, we have a hash of machines and a list of error logs for each.
+    # Build a stream for each machine.
+    my @log_streams;
+    for my $logs (values %logs_for) {
+        my $access_log_for = sub {
+            s{ [.] error [.] gz \z }{.access.gz}xms;
+            return $_;
+        };
+        my @error_logs  = @{$logs};
+        my @access_logs = apply { $access_log_for->() } @error_logs;
+        push @log_streams, build_log_stream(\@error_logs, \@access_logs);
+    }
+
+    # Finally, we're going to merge the resulting streams together in a way
+    # that sorts them by timestamp.
+    my $earliest_timestamp = sub {
+        $a->head->{timestamp} < $b->head->{timestamp} ? $a : $b;
+    };
+    my $merge = sub {
+        my (@streams) = grep { defined $_->head } @_;
+        return if !@streams;
+        return $streams[0]->get if @streams == 1;
+        my $best = reduce { $earliest_timestamp->() } @streams;
+        return $best->get;
+    };
+    return Log::Stream::Merge->new($merge, @log_streams);
 }
 
 # Print values as CSV (RFC 4180) to standard output.
@@ -241,28 +322,41 @@ sub simple_agent {
 }
 
 # Parse command-line options.
-my ($csv, $input);
+my ($archive, $csv, $input);
 Getopt::Long::Configure('bundling', 'no_ignore_case');
 GetOptions(
+    'a|archive'        => \$archive,
     'browser-version!' => \$WANT_VERSION,
     'c|csv'            => \$csv,
     'i|input=s'        => \$input,
 ) or exit 1;
+if ($archive && defined $input) {
+    die "Archive flag (-a) does not make sense with CSV input (-i)\n";
+}
 
 # If given an input file, read it as CSV data.
 my $stream;
 if (defined $input) {
     if (@ARGV) {
-        die "Usage: webkdc-user-agent -i <input>\n";
+        die "Usage: webkdc-user-agent [-c] -i <input>\n";
     }
     $stream = build_csv_stream($input);
+}
+
+# Else if told that our command-line arguments are log archives, build a
+# stream from the log files found there.
+elsif ($archive) {
+    if (!@ARGV) {
+        die "Usage: webkdc-user-agent [-c] -a <directory> [...]\n";
+    }
+    $stream = build_archive_stream(@ARGV);
 }
 
 # Otherwise, expect log files on the command line and build a stream from them.
 else {
     my ($error, $access) = @ARGV;
     if (!defined $access) {
-        die "Usage: webkdc-user-agent [-d] <error> <access>\n";
+        die "Usage: webkdc-user-agent [-c] <error> <access>\n";
     }
     $stream = build_log_stream([$error], [$access]);
 }
@@ -287,12 +381,12 @@ else {
     }
 
     # Determine the maximum count of users for a given user agent.
-    my @counts      = map { scalar keys $agents{$_} } keys %agents;
-    my $max_count   = max @counts;
-    my $total_count = sum 0, @counts;
+    my @counts = map { scalar keys $agents{$_} } keys %agents;
+    my $max_count = max @counts;
 
     # The width for printing will be the log base 10 of the max count.
-    my $width = int(log($max_count) / log(10)) + 1;
+    ## no critic (ValuesAndExpressions::ProhibitMagicNumbers)
+    my $width = int(log($max_count) / log 10) + 1;
 
     # Determine the total number of unique users.  This isn't just the sum
     # of the counts, since some users will use multiple devices.
