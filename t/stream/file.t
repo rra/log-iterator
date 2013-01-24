@@ -15,7 +15,7 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 47;
+use Test::More tests => 78;
 
 # Load the module.
 BEGIN { use_ok('Log::Stream::File') }
@@ -50,7 +50,27 @@ is($stream->get,  undef, 'Undef from get at end of file');
 
 # Test handling multiple files by opening the same file twice.
 $stream = Log::Stream::File->new({ files => [$path, $path] });
+isa_ok($stream, 'Log::Stream::File');
 @log_lines = (@log_lines, @log_lines);
+for my $i (0 .. $#log_lines) {
+    my $log_line = $log_lines[$i];
+    is($stream->head, $log_line, "Head of line $i");
+    is($stream->get,  $log_line, "Get of line $i");
+}
+is($stream->head, undef, 'Undef from head at end of file');
+is($stream->get,  undef, 'Undef from get at end of file');
+
+# Test the empty device.
+my $devnull = File::Spec->devnull;
+$stream = Log::Stream::File->new({ files => $devnull });
+isa_ok($stream, 'Log::Stream::File');
+is($stream->head, undef, 'Undef from head of /dev/null');
+is($stream->get,  undef, 'Undef from get of /dev/null');
+
+# Test the empty device mixed into other valid files.
+my %args = (files => [$devnull, $path, $devnull, $path]);
+$stream = Log::Stream::File->new(\%args);
+isa_ok($stream, 'Log::Stream::File');
 for my $i (0 .. $#log_lines) {
     my $log_line = $log_lines[$i];
     is($stream->head, $log_line, "Head of line $i");
