@@ -17,15 +17,27 @@ use warnings;
 
 use base qw(Log::Stream::Parse);
 
-use Date::Parse qw(str2time);
-use Memoize;
 use Readonly;
-
-# Memoize str2time, which is otherwise painfully slow.
-memoize('str2time');
+use Time::Local qw(timegm);
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
+
+# Map of month names to localtime month numbers.
+Readonly my %MONTH_TO_NUM => (
+    Jan => 0,
+    Feb => 1,
+    Mar => 2,
+    Apr => 3,
+    May => 4,
+    Jun => 5,
+    Jul => 6,
+    Aug => 7,
+    Sep => 8,
+    Oct => 9,
+    Nov => 10,
+    Dec => 11,
+);
 
 # Components of an Apache access log.
 Readonly my $VHOST_REGEX  => qr{ (?: ( [\w._:-]+ ) \s )?      }xms;
@@ -67,6 +79,49 @@ Readonly my $QUERY_STRING_REGEX => qr{
 # Implementation
 ##############################################################################
 
+# Given the timestamp from an Apache combined log, convert it into seconds
+# since epoch.  Do this with hand-rolled code, since str2time is rather slow
+# and excessively complex when we already know the exact format.
+#
+# A timestamp looks like "03/Feb/2013:07:04:23 -0800".
+#
+# $self      - The parser object
+# $timestamp - The text timestamp from the log file
+#
+# Returns: The timestamp in seconds since epoch
+sub _parse_timestamp {
+    my ($self, $timestamp) = @_;
+
+    # Do memoization with a single cache.  If we saw the same timestamp as the
+    # last time we were called, return the same value.  We normally process
+    # logs in sequence, so doing more memoization is pointless and just bloats
+    # memory usage.
+    if ($self->{last_timestamp} && $timestamp eq $self->{last_timestamp}) {
+        return $self->{last_time};
+    }
+
+    # Parse the timestamp and map it to localtime values.
+    my ($mday, $mon, $year, $hour, $min, $sec, $zone) = split m{[/: ]}xms,
+      $timestamp;
+    $mon = $MONTH_TO_NUM{$mon};
+    $year -= 1900;
+
+    # Convert assuming a GMT time.
+    my $time = timegm($sec, $min, $hour, $mday, $mon, $year);
+
+    # Time::Local doesn't handle the time zone offset, so we have to adjust
+    # after the fact.  The zone is [+-]HHMM, not a quantity of seconds.
+    my $zone_sign = substr($zone, 0, 1) . '1';
+    my $zone_hour = substr $zone, 1, 2;
+    my $zone_min = substr $zone, 3;
+    $time -= $zone_sign * ($zone_hour * 60 + $zone_min) * 60;
+
+    # Cache for the next run.
+    $self->{last_timestamp} = $timestamp;
+    $self->{last_time}      = $time;
+    return $time;
+}
+
 # Given a line of Apache access log output, parse it into a result structure
 # with fields as described in the POD for this module.
 #
@@ -84,7 +139,7 @@ sub parse {
         ) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
         # Flesh out the basic information.
-        $timestamp = str2time($timestamp);
+        $timestamp = $self->_parse_timestamp($timestamp);
         my $result = {
             timestamp => $timestamp,
             client    => $client,

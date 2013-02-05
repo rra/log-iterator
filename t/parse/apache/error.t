@@ -14,8 +14,9 @@ use strict;
 use warnings;
 
 use File::Spec;
+use Time::Local qw(timelocal);
 
-use Test::More tests => 27;
+use Test::More tests => 36;
 
 # Load the module.
 BEGIN {
@@ -62,3 +63,38 @@ for my $i (0 .. $#RESULT) {
 }
 is($stream->head, undef, 'Undef from head at end of file');
 is($stream->get,  undef, 'Undef from get at end of file');
+
+# Test a bunch of timestamp conversions directly.  We can only test if we can
+# force a time zone, since the date format doesn't include the time zone.
+local $ENV{TZ} = 'PST8PDT';
+SKIP: {
+    my $time = timelocal(23, 4, 7, 3, 1, 113);
+    if ($time != 1_359_903_863) {
+        skip 'cannot change time zone', 6;
+    }
+
+    # The set of times to test, except for ambiguous daylight savings.
+    my %timestamp_to_time = (
+        'Feb 03 07:04:23 2013' => 1_359_903_863,
+        'Jan 01 00:00:00 2013' => 1_357_027_200,
+        'Dec 31 23:59:59 2012' => 1_357_027_199,
+        'Feb 29 07:14:15 2012' => 1_330_528_455,
+        'Apr  2 01:59:59 2000' => 954_669_599,
+        'Apr  2 03:00:00 2000' => 954_669_600,
+        'Jan 01 00:00:00 1970' => 28_800,
+        'Dec 31 16:00:00 1969' => 0,
+    );
+    for my $timestamp (sort keys %timestamp_to_time) {
+        my $wanted = $timestamp_to_time{$timestamp};
+        is($stream->_parse_timestamp($timestamp),
+            $wanted, "Parse of $timestamp");
+    }
+
+    # Time during daylight savings is ambiguous.  Allow either.
+    $time = $stream->_parse_timestamp('Oct 29 01:30:00 2000');
+    if ($time == 972_808_200) {
+        is($time, 972_808_200, 'Parse of Oct 29 01:30:00 2000');
+    } else {
+        is($time, 972_811_800, 'Parse of Oct 29 01:30:00 2000');
+    }
+}

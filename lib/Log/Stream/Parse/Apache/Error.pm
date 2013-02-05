@@ -17,15 +17,27 @@ use warnings;
 
 use base qw(Log::Stream::Parse);
 
-use Date::Parse qw(str2time);
-use Memoize;
 use Readonly;
-
-# Memoize str2time, which is otherwise painfully slow.
-memoize('str2time');
+use Time::Local qw(timelocal);
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
+
+# Map of month names to localtime month numbers.
+Readonly my %MONTH_TO_NUM => (
+    Jan => 0,
+    Feb => 1,
+    Mar => 2,
+    Apr => 3,
+    May => 4,
+    Jun => 5,
+    Jul => 6,
+    Aug => 7,
+    Sep => 8,
+    Oct => 9,
+    Nov => 10,
+    Dec => 11,
+);
 
 # Regex matching an Apache log timestamp.  Returns the timestamp (without the
 # day of the week) as $1.
@@ -66,6 +78,41 @@ Readonly my $APACHE_ERROR_REGEX => qr{
 # Implementation
 ##############################################################################
 
+# Given the timestamp from an Apache error log, convert it into seconds since
+# epoch.  Do this with hand-rolled code, since str2time is rather slow and
+# excessively complex when we already know the exact format.
+#
+# A timestamp looks like "Sun Feb 03 23:45:07 2013".
+#
+# $self      - The parser object
+# $timestamp - The text timestamp from the log file
+#
+# Returns: The timestamp in seconds since epoch
+sub _parse_timestamp {
+    my ($self, $timestamp) = @_;
+
+    # Do memoization with a single cache.  If we saw the same timestamp as the
+    # last time we were called, return the same value.  We normally process
+    # logs in sequence, so doing more memoization is pointless and just bloats
+    # memory usage.
+    if ($self->{last_timestamp} && $timestamp eq $self->{last_timestamp}) {
+        return $self->{last_time};
+    }
+
+    # Parse the timestamp and map it to localtime values.
+    my ($mon, $mday, $hour, $min, $sec, $year) = split m{[ :]+}xms, $timestamp;
+    $mon = $MONTH_TO_NUM{$mon};
+    $year -= 1900;
+
+    # Convert assuming the current local time zone.
+    my $time = timelocal($sec, $min, $hour, $mday, $mon, $year);
+
+    # Cache for the next run.
+    $self->{last_timestamp} = $timestamp;
+    $self->{last_time}      = $time;
+    return $time;
+}
+
 # Given a line of Apache error log output, parse it into a result structure
 # with fields as described in the POD for this module.
 #
@@ -77,7 +124,7 @@ sub parse {
     my ($self, $line) = @_;
     if ($line =~ m{ $APACHE_ERROR_REGEX }oxms) {
         my ($timestamp, $level, $client, $data) = ($1, $2, $3, $4);
-        $timestamp = str2time($timestamp);
+        $timestamp = $self->_parse_timestamp($timestamp);
         my $result = {
             timestamp => $timestamp,
             level     => $level,
