@@ -29,6 +29,9 @@ if (!eval { require HTTP::BrowserDetect }) {
 if (!eval { require List::MoreUtils }) {
     plan skip_all => 'List::MoreUtils required for test';
 }
+if (!eval { require Memoize }) {
+    plan skip_all => 'Memoize required for test';
+}
 if (!eval { require Text::CSV }) {
     plan skip_all => 'Text::CSV required for test';
 }

@@ -26,6 +26,7 @@ use Log::Stream::Merge::Rewindable;
 use Log::Stream::Parse::Apache::Combined;
 use Log::Stream::Parse::WebKDC;
 use Log::Stream::Transform;
+use Memoize;
 use Readonly;
 use Text::CSV;
 
@@ -373,6 +374,9 @@ if ($csv) {
 # Otherwise, generate user agent statistics.
 else {
     my %agents;
+
+    # Memoize simple_agent.  HTTP::BrowserDetect is slow.
+    memoize('simple_agent');
 
     # For each user agent, store a hash of users who use that agent.
     while (my $entry = $stream->get) {
