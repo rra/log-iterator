@@ -167,7 +167,7 @@ sub build_log_stream {
     my ($error_files, $access_files) = @_;
 
     # Determine what file stream class to use.
-    my $is_gzip = $error_files->[0] =~ m{ \.gz \z }xms;
+    my $is_gzip = $error_files->[0] =~ m{ [.]gz \z }xms;
     my $class = $is_gzip ? 'Log::Stream::File::Gzip' : 'Log::Stream::File';
 
     # Create the error log stream.  We stick a filter in front of it to ignore
@@ -244,7 +244,7 @@ sub build_archive_stream {
             s{ [.] error [.] gz \z }{.access.gz}xms;
             return $_;
         };
-        my @error_logs  = sort @{$logs};
+        my @error_logs = sort @{$logs};
         my @access_logs = apply { $access_log_for->() } @error_logs;
         push @log_streams, build_log_stream(\@error_logs, \@access_logs);
     }
@@ -390,7 +390,6 @@ else {
     my $max_count = max @counts;
 
     # The width for printing will be the log base 10 of the max count.
-    ## no critic (ValuesAndExpressions::ProhibitMagicNumbers)
     my $width = int(log($max_count) / log 10) + 1;
 
     # Determine the total number of unique users.  This isn't just the sum
