@@ -17,32 +17,18 @@ use autodie;
 use strict;
 use warnings;
 
+use lib 't/lib';
+
 use Test::More;
+use Test::RRA qw(use_prereq);
 
-# Check if we have the modules required to run webkdc-user-agent.
-if (!eval { require File::Slurp }) {
-    plan skip_all => 'HTTP::BrowserDetect required for test';
-}
-if (!eval { require HTTP::BrowserDetect }) {
-    plan skip_all => 'HTTP::BrowserDetect required for test';
-}
-if (!eval { require List::MoreUtils }) {
-    plan skip_all => 'List::MoreUtils required for test';
-}
-if (!eval { require Memoize }) {
-    plan skip_all => 'Memoize required for test';
-}
-if (!eval { require Text::CSV }) {
-    plan skip_all => 'Text::CSV required for test';
-}
-if (!eval { require Test::Script::Run }) {
-    plan skip_all => 'Test::Script::Run required for test';
-
-    # Suppress "only used once" warnings.
-    @Test::Script::Run::BIN_DIRS = ();
-}
-File::Slurp->import;
-Test::Script::Run->import;
+# Load required modules or modules that are used by webkdc-user-agent.
+use_prereq('File::Slurp', qw(read_file));
+use_prereq('HTTP::BrowserDetect');
+use_prereq('List::MoreUtils');
+use_prereq('Memoize');
+use_prereq('Text::CSV');
+use_prereq('Test::Script::Run', qw(run_output_matches));
 
 # It's now safe to present a plan.
 plan tests => 3;
@@ -74,3 +60,6 @@ run_output_matches('webkdc-user-agent', [$webkdc, $access],
 # Test reporting using the CSV file as input.
 run_output_matches('webkdc-user-agent', ['-i', $csv_output],
     [@expected], q{}, 'webkdc-user-agent report');
+
+# Suppress "only used once" warnings.
+END { @Test::Script::Run::BIN_DIRS = () }
