@@ -2,27 +2,42 @@
 #
 # Test that all methods are documented in POD.
 #
+# The canonical version of this file is maintained in the rra-c-util package,
+# which can be found at <http://www.eyrie.org/~eagle/software/rra-c-util/>.
+#
 # Written by Russ Allbery <rra@stanford.edu>
 # Copyright 2013
 #     The Board of Trustees of the Leland Stanford Junior University
 #
-# See LICENSE for licensing terms.
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
 
+use 5.006;
 use strict;
 use warnings;
 
+use lib 't/lib';
+
 use Test::More;
+use Test::RRA qw(use_prereq);
+use Test::RRA::Config qw(@POD_COVERAGE_EXCLUDE);
 
-# Additional regexes for subs that don't require POD documentation.
-my @NO_POD_NEEDED = (qr{ \A (?:LOCAL|POP|PUSH)COLOR \z}xms);
+use_prereq('Test::Pod::Coverage');
 
-# Skip tests if Test::Pod::Coverage is not installed.
-if (!eval { require Test::Pod::Coverage }) {
-    plan skip_all => 'Test::Pod::Coverage required to test POD coverage';
-}
-Test::Pod::Coverage->import;
-
-# Test everything found in the distribution.  Ignore some subs that implement
-# the keyword interface; they are documented, just in a way that Pod::Coverage
-# doesn't understand.
-all_pod_coverage_ok({ also_private => [@NO_POD_NEEDED] });
+# Test everything found in the distribution.
+all_pod_coverage_ok({ also_private => [@POD_COVERAGE_EXCLUDE] });
