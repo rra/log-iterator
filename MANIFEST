@@ -49,6 +49,7 @@ t/stream/merge.t
 t/stream/merge/rewindable.t
 t/stream/rewindable.t
 t/stream/transform.t
+t/style/coverage.t
 t/style/critic.t
 t/style/minimum-version.t
 t/style/strict.t
