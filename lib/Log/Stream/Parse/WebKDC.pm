@@ -33,9 +33,9 @@ Readonly my $PAIR_REGEX => qr{
       |
       \"                                #   open quote
       ( (?>                             #   quoted value
-        \\.                             #     backslash escapes anything
+        \"\"                            #     quote escapes itself
         |
-        [^\\\"]                         #     any other character
+        [^\"]                           #     any other character
       )* )
       \"                                #   end of quote
       (?: \s+ | \z )                    #   trailing whitespace or end
@@ -69,12 +69,19 @@ sub parse {
     # One way or another, we will fill out other keys than data.
     delete $result->{data};
 
-    # See if this is an event.  If not, set message.  If so, parse it.
+    # See if this is an event.  If not, set message.  If so, parse it.  If the
+    # value was quoted, we need to remove the doubled quotes.
     if ($data =~ s{ \A event = (\S+) \s+ }{}xms) {
         $result->{event} = $1;
-        while ($data =~ m{ \G $PAIR_REGEX }goxms) {
+        while ($data =~ m{ \G $PAIR_REGEX }xmsgo) {
             my $key = $1;
-            my $value = defined $2 ? $2 : $3;
+            my $value;
+            if (defined($2)) {
+                $value = $2;
+            } else {
+                $value = $3;
+                $value =~ s{ \"\" }{\"}xmsg;
+            }
             $result->{$key} = $value;
         }
     } else {

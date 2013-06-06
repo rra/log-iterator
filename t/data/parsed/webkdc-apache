@@ -48,7 +48,7 @@
     {
         timestamp => 1358840865,
         level     => 'notice',
-        data      => 'mod_webkdc: event=requestToken from=127.0.0.1 server=krb5:webauth/example.stanford.edu@stanford.edu user=user2 errorCode=17 errorMessage="forced authentication, need to login"',
+        data      => 'mod_webkdc: event=requestToken from=127.0.0.1 server=krb5:webauth/example.stanford.edu@stanford.edu user=user2 errorCode=17 errorMessage="forced authentication, ""need to login"""',
     },
     {
         timestamp => 1358840870,

@@ -71,7 +71,7 @@
         server       => 'krb5:webauth/example.stanford.edu@stanford.edu',
         user         => 'user2',
         errorCode    => '17',
-        errorMessage => 'forced authentication, need to login',
+        errorMessage => 'forced authentication, "need to login"',
     },
     {
         timestamp => 1358840870,
