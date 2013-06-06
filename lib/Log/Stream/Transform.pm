@@ -58,7 +58,7 @@ sub new {
 __END__
 
 =for stopwords
-API Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense
+Allbery API Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense
 
 =head1 NAME
 

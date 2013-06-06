@@ -110,7 +110,7 @@ sub get {
 __END__
 
 =for stopwords
-Kaufmann MERCHANTABILITY NONINFRINGEMENT parsers sublicense
+Allbery Kaufmann MERCHANTABILITY NONINFRINGEMENT parsers sublicense
 
 =head1 NAME
 

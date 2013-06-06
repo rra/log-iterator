@@ -161,7 +161,7 @@ sub rewind {
 #
 # $self - The Log::Stream::Rewindable object
 #
-# Returns: True
+# Returns: List of elements
 #  Throws: Text exception if no bookmark is set
 sub saved {
     my ($self) = @_;
@@ -179,7 +179,7 @@ sub saved {
 __END__
 
 =for stopwords
-API Kaufmann MERCHANTABILITY NONINFRINGEMENT seekable sublicense
+Allbery API Kaufmann MERCHANTABILITY NONINFRINGEMENT seekable sublicense
 
 =head1 NAME
 

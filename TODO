@@ -40,6 +40,3 @@ Testing:
 
  * Find examples of Apache and WebKDC logs with backslashes in quoted
    strings and add them to the test suite.
-
- * Fix the spelling test to not use my personal aspell dictionary so that
-   we have a complete set of appropriate stopwords.

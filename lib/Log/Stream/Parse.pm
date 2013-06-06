@@ -86,7 +86,7 @@ sub parse {
 __END__
 
 =for stopwords
-API Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses
+Allbery API Kaufmann MERCHANTABILITY NONINFRINGEMENT sublicense subclasses
 
 =head1 NAME
 

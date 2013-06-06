@@ -81,7 +81,7 @@ sub new {
 __END__
 
 =for stopwords
-Kaufmann MERCHANTABILITY NONINFRINGEMENT parsers sublicense zlib
+Allbery Kaufmann MERCHANTABILITY NONINFRINGEMENT parsers sublicense zlib
 
 =head1 NAME
 

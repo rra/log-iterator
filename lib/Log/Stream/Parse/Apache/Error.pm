@@ -147,8 +147,8 @@ sub parse {
 __END__
 
 =for stopwords
-API CPAN IP Kaufmann MERCHANTABILITY NONINFRINGEMENT Readonly TimeDate
-sublicense subclasses timestamp
+Allbery API CPAN IP Kaufmann MERCHANTABILITY NONINFRINGEMENT Readonly
+TimeDate sublicense subclasses timestamp
 
 =head1 NAME
 

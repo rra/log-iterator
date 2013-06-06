@@ -195,9 +195,9 @@ sub parse {
 __END__
 
 =for stopwords
-API ARGS CGI CPAN DNS Dominus IP Kaufmann MERCHANTABILITY NONINFRINGEMENT
-Readonly TimeDate Unparsable hostname ident prepend sublicense subclasses
-timestamp undef unparsed vhost
+Allbery API ARGS CGI CPAN DNS Dominus IP Kaufmann MERCHANTABILITY
+NONINFRINGEMENT Readonly TimeDate Unparsable hostname ident prepend
+sublicense subclasses timestamp undef unparsed vhost
 
 =head1 NAME
 
