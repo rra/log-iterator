@@ -127,23 +127,35 @@ sub parse {
     # Read the results out of the parser.  We have four possibilities: seven
     # basic fields (the timestamp has internal whitespace, so it looks like
     # eight), with or without a leading virtual host, and with or without
-    # trailing referrer and user agent information.  If we have more than ten
-    # fields, only look at the first ten.
-    my @fields = $CSV_PARSER->fields;
+    # trailing referrer and user agent information.
+    #
+    # Parsing this way and determining what we have from numeric field counds
+    # is kind of ugly, but it saves about 25% of the run time compared to
+    # parsing more directly with regular expressions.
     my (
         $vhost,        $client, $user, $ident_user, $timestamp,
         $query_string, $status, $size, $referrer,   $user_agent
     );
+    my @fields = $CSV_PARSER->fields;
+
+    # If the log format added extra fields at the end, ignore them.
     if (@fields > 11) {
         @fields = @fields[0 .. 9];
     }
+
+    # Hopefully detect the presence of the vhost by the field count.
     if (@fields == 9 || @fields == 11) {
         $vhost = shift(@fields);
     }
+
+    # Pull out the rest of the fields and strip [] off of the timestamp.
     ($client, $user, $ident_user) = @fields[0 .. 2];
     $timestamp = join(q{ }, @fields[3 .. 4]);
     $timestamp =~ tr{[]}{}d;
     ($query_string, $status, $size, $referrer, $user_agent) = @fields[5 .. 9];
+
+    # Sanity check.  The size field is the last mandatory field and must be
+    # numeric or we assume we can't parse this line.
     if (!defined($size) || $size !~ m{ \A \d+ \z }xms) {
         return {};
     }
@@ -175,7 +187,7 @@ sub parse {
     }
 
     # Parse the query string.
-    if ($query_string =~ m{ $QUERY_STRING_REGEX }oxms) {
+    if ($query_string =~ m{ $QUERY_STRING_REGEX }xmso) {
         my ($method, $query, $protocol) = ($1, $2, $3);
         my $base_query = $query;
         $base_query =~ s{ [?] .* }{}xms;
