@@ -72,6 +72,7 @@
     },
     {
         timestamp  => 1358840740,
+        vhost      => 'www.example.com:443',
         client     => '10.10.10.11',
         user       => 'foo',
         ident_user => 'bar',
@@ -81,8 +82,6 @@
         protocol   => 'HTTP/1.1',
         status     => '200',
         size       => '3211',
-        referrer   => 'https://weblogin.stanford.edu/login?RT=TOKEN;ST=TOKEN;test_cookie=1',
-        user_agent => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/536.26.17 (KHTML, like Gecko) Version/6.0.2 Safari/536.26.17',
     },
     {
         timestamp  => 1358840860,
@@ -94,6 +93,7 @@
     },
     {
         timestamp  => 1358840872,
+        vhost      => 'www.example.com:443',
         client     => '10.10.10.12',
         method     => 'GET',
         query      => '/login/?RT=TOKEN;ST=TOKEN',
@@ -103,5 +103,16 @@
         size       => '7882',
         referrer   => 'https://example.org/',
         user_agent => 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0)',
+    },
+    {
+        timestamp  => 1358840873,
+        client     => '127.0.0.1',
+        method     => 'GET',
+        query      => '/"',
+        base_query => '/"',
+        protocol   => 'HTTP/1.1',
+        status     => '200',
+        size       => '4991',
+        user_agent => 'libwww-perl/5.836',
     },
 );
