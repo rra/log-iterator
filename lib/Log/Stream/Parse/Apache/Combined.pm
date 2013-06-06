@@ -19,6 +19,7 @@ use base qw(Log::Stream::Parse);
 
 use Readonly;
 use Time::Local qw(timegm);
+use Text::CSV;
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -39,34 +40,20 @@ Readonly my %MONTH_TO_NUM => (
     Dec => 11,
 );
 
-# Components of an Apache access log.
-Readonly my $VHOST_REGEX  => qr{ (?: ( [\w._:-]+ ) \s )?      }xms;
-Readonly my $CLIENT_REGEX => qr{ ( [[:xdigit:].:]+ )          }xms;
-Readonly my $USER_REGEX   => qr{ ( \S+ )                      }xms;
-Readonly my $TIME_REGEX   => qr{ \[ ( [^\]]+ ) \]             }xms;
-Readonly my $STRING_REGEX => qr{ \" ( (?> \\. | [^\"] )+ ) \" }xms;
+# Build a CSV parser for the Apache access logs.  The quote and escape syntax
+# is something that Text::CSV can deal with, and it is much, much faster than
+# using regular expressions.
+Readonly my $CSV_PARSER => Text::CSV->new(
+    {
+        sep_char    => q{ },
+        quote_char  => q{"},    #"# cperl-mode
+        escape_char => q{\\},
+    }
+);
 
-# Regex to match a single line of Apache access log output.
-Readonly my $APACHE_ACCESS_REGEX => qr{
-    \A
-    (?>
-      $VHOST_REGEX              # optional virtual host (1)
-      $CLIENT_REGEX             # client IP address (2)
-      \s $USER_REGEX            # authentication information (3)
-      \s $USER_REGEX            # ident information (4)
-      \s $TIME_REGEX            # timestamp (5)
-    )                           # stop backtracking once we find timestamp
-    \s $STRING_REGEX            # query (6)
-    \s ( \d+ )                  # HTTP status (7)
-    \s ( \d+ )                  # size (8)
-    (?:                         # look for user agent (optional)
-      \s $STRING_REGEX          # referrer (9)
-      \s $STRING_REGEX          # user agent (10)
-    )?
-    \s* \z
-}xms;
-
-# Regex to parse the query string.
+# Regex to parse the query string.  We could use Text::CSV for this as well,
+# but that doesn't handle weird cases such as unescaped double quotes in the
+# query.
 Readonly my $QUERY_STRING_REGEX => qr{
     \A
     (?> ( [[:upper:]]+ ) \s+ )  # method (1)
@@ -92,10 +79,10 @@ Readonly my $QUERY_STRING_REGEX => qr{
 sub _parse_timestamp {
     my ($self, $timestamp) = @_;
 
-    # Do memoization with a single cache.  If we saw the same timestamp as the
-    # last time we were called, return the same value.  We normally process
-    # logs in sequence, so doing more memoization is pointless and just bloats
-    # memory usage.
+    # Do memoization with a single cached value.  If we saw the same timestamp
+    # as the last time we were called, return the same value.  We normally
+    # process logs in sequence, so doing more memoization is pointless and
+    # just bloats memory usage.
     if ($self->{last_timestamp} && $timestamp eq $self->{last_timestamp}) {
         return $self->{last_time};
     }
@@ -109,11 +96,11 @@ sub _parse_timestamp {
     # Convert assuming a GMT time.
     my $time = timegm($sec, $min, $hour, $mday, $mon, $year);
 
-    # Time::Local doesn't handle the time zone offset, so we have to adjust
-    # after the fact.  The zone is [+-]HHMM, not a quantity of seconds.
+    # Handle the time zone offset.  Note that the zone is [+-]HHMM, not a
+    # quantity of seconds.
     my $zone_sign = substr($zone, 0, 1) . '1';
-    my $zone_hour = substr $zone, 1, 2;
-    my $zone_min = substr $zone, 3;
+    my $zone_hour = substr($zone, 1, 2);
+    my $zone_min  = substr($zone, 3);
     $time -= $zone_sign * ($zone_hour * 60 + $zone_min) * 60;
 
     # Cache for the next run.
@@ -131,60 +118,77 @@ sub _parse_timestamp {
 # Returns: The corresponding data structure or an empty hash on parse failure
 sub parse {
     my ($self, $line) = @_;
-    if ($line =~ m{ $APACHE_ACCESS_REGEX }oxms) {
-        my (
-            $vhost,     $client,       $user,   $ident_user,
-            $timestamp, $query_string, $status, $size,
-            $referrer,  $user_agent
-        ) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
-        # Flesh out the basic information.
-        $timestamp = $self->_parse_timestamp($timestamp);
-        my $result = {
-            timestamp => $timestamp,
-            client    => $client,
-            status    => $status,
-            size      => $size,
-        };
-
-        # Optional information.  Only add the key if we have a useful value.
-        if (defined $vhost) {
-            $result->{vhost} = $vhost;
-        }
-        if ($user ne q{-}) {
-            $result->{user} = $user;
-        }
-        if ($ident_user ne q{-}) {
-            $result->{ident_user} = $ident_user;
-        }
-        if (defined($referrer) && $referrer ne q{-}) {
-            $referrer =~ s{ \\ (.) }{$1}gxms;
-            $result->{referrer} = $referrer;
-        }
-        if (defined($user_agent) && $user_agent ne q{-}) {
-            $user_agent =~ s{ \\ (.) }{$1}gxms;
-            $result->{user_agent} = $user_agent;
-        }
-
-        # Parse the query string.
-        $query_string =~ s{ \\ (.) }{$1}gxms;
-        if ($query_string =~ m{ $QUERY_STRING_REGEX }oxms) {
-            my ($method, $query, $protocol) = ($1, $2, $3);
-            my $base_query = $query;
-            $base_query =~ s{ [?] .* }{}xms;
-            $result->{method}     = $method;
-            $result->{query}      = $query;
-            $result->{base_query} = $base_query;
-            if (defined $protocol) {
-                $result->{protocol} = $protocol;
-            }
-        } else {
-            $result->{query} = $query_string;
-        }
-        return $result;
-    } else {
+    # Attempt to parse the line.  If this fails, return the empty hash.
+    if (!$CSV_PARSER->parse($line)) {
         return {};
     }
+
+    # Read the results out of the parser.  We have four possibilities: seven
+    # basic fields (the timestamp has internal whitespace, so it looks like
+    # eight), with or without a leading virtual host, and with or without
+    # trailing referrer and user agent information.  If we have more than ten
+    # fields, only look at the first ten.
+    my @fields = $CSV_PARSER->fields;
+    my (
+        $vhost,        $client, $user, $ident_user, $timestamp,
+        $query_string, $status, $size, $referrer,   $user_agent
+    );
+    if (@fields > 11) {
+        @fields = @fields[0 .. 9];
+    }
+    if (@fields == 9 || @fields == 11) {
+        $vhost = shift(@fields);
+    }
+    ($client, $user, $ident_user) = @fields[0 .. 2];
+    $timestamp = join(q{ }, @fields[3 .. 4]);
+    $timestamp =~ tr{[]}{}d;
+    ($query_string, $status, $size, $referrer, $user_agent) = @fields[5 .. 9];
+    if (!defined($size) || $size !~ m{ \A \d+ \z }xms) {
+        return {};
+    }
+
+    # Flesh out the basic information.
+    $timestamp = $self->_parse_timestamp($timestamp);
+    my $result = {
+        timestamp => $timestamp,
+        client    => $client,
+        status    => $status,
+        size      => $size,
+    };
+
+    # Optional information.  Only add the key if we have a useful value.
+    if (defined $vhost) {
+        $result->{vhost} = $vhost;
+    }
+    if ($user ne q{-}) {
+        $result->{user} = $user;
+    }
+    if ($ident_user ne q{-}) {
+        $result->{ident_user} = $ident_user;
+    }
+    if (defined($referrer) && $referrer ne q{-}) {
+        $result->{referrer} = $referrer;
+    }
+    if (defined($user_agent) && $user_agent ne q{-}) {
+        $result->{user_agent} = $user_agent;
+    }
+
+    # Parse the query string.
+    if ($query_string =~ m{ $QUERY_STRING_REGEX }oxms) {
+        my ($method, $query, $protocol) = ($1, $2, $3);
+        my $base_query = $query;
+        $base_query =~ s{ [?] .* }{}xms;
+        $result->{method}     = $method;
+        $result->{query}      = $query;
+        $result->{base_query} = $base_query;
+        if (defined($protocol)) {
+            $result->{protocol} = $protocol;
+        }
+    } else {
+        $result->{query} = $query_string;
+    }
+    return $result;
 }
 
 ##############################################################################
@@ -195,7 +199,7 @@ sub parse {
 __END__
 
 =for stopwords
-Allbery API ARGS CGI CPAN DNS Dominus IP Kaufmann MERCHANTABILITY
+Allbery API ARGS CGI CPAN CSV DNS Dominus IP Kaufmann MERCHANTABILITY
 NONINFRINGEMENT Readonly TimeDate Unparsable hostname ident prepend
 sublicense subclasses timestamp undef unparsed vhost
 
@@ -219,8 +223,8 @@ Log::Stream::Parse::Apache::Combined - Stream parser for Apache logs
 
 =head1 REQUIREMENTS
 
-Perl 5.10 or later and the Date::Parse module (available as part of the
-TimeDate distribution on CPAN) and Readonly module.
+Perl 5.10 or later and the Readonly and Text::CSV modules (both available
+from CPAN).
 
 =head1 DESCRIPTION
 
@@ -341,6 +345,11 @@ line could not be parsed, will return an empty anonymous hash (which will
 be edited out of the stream normally).
 
 =back
+
+=head1 WARNINGS
+
+This module uses a single static CSV parser for speed and therefore is not
+thread-safe.
 
 =head1 AUTHOR
 
