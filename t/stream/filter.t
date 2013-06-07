@@ -15,7 +15,7 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 14;
+use Test::More tests => 19;
 
 # Load the modules.
 BEGIN {
@@ -56,3 +56,18 @@ is($stream->head, undef,    '...and now head() is undef');
 is($stream->get,  undef,    '...and get() is undef');
 is($stream->get,  undef,    '...and stays undef');
 is($stream->head, undef,    '...and head is still undef');
+
+# Test filtering a single element stream.
+@data   = qw(first);
+$stream = Log::Stream->new({ code => $code });
+$stream = eval { Log::Stream::Filter->new($filter, $stream) };
+is($@,            q{},   'No exceptions on filter object creation');
+is($stream->head, undef, 'First head() is undef on short stream');
+
+# Test filtering an empty stream.
+$code = sub { return };
+$stream = Log::Stream->new({ code => $code });
+$stream = eval { Log::Stream::Filter->new($filter, $stream) };
+is($@,            q{},   'No exceptions on filter object creation');
+is($stream->head, undef, 'First head() is undef on empty stream');
+is($stream->tail, undef, 'tail() is undef on empty stream');
