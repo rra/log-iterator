@@ -264,25 +264,6 @@ sub build_archive_stream {
     return Log::Stream::Merge->new($merge, @log_streams);
 }
 
-# Print values as CSV (RFC 4180) to standard output.
-#
-# @values - List of values to output
-#
-# Returns: undef
-#  Throws: Text exception on failure to print to standard output
-sub print_csv {
-    my @values = @_;
-    for my $value (@values) {
-        if ($value =~ m{ [\",] }xms) {
-            $value =~ s{ \" }{""}xmsg;
-            $value = qq{"$value"};
-        }
-    }
-    say {*STDOUT} join q{,}, @values
-      or die "Cannot write to standard output: $!\n";
-    return;
-}
-
 # User agent mapping.  Take a user agent string and converts it into something
 # somewhat more sensible and with less useless information, namely:
 #
@@ -365,9 +346,12 @@ else {
 
 # If told to just output CSV, print out each entry from our stream.
 if ($csv) {
-    print_csv(qw(timestamp user user_agent));
+    my $printer = Text::CSV->new({ eol => "\n", quote_space => 0 });
+    my @fields = qw(timestamp user user_agent);
+    $printer->print(\*STDOUT, \@fields);
     while (my $entry = $stream->get) {
-        print_csv($entry->{timestamp}, $entry->{user}, $entry->{user_agent});
+        my @data = @{$entry}{@fields};
+        $printer->print(\*STDOUT, \@data);
     }
 }
 
