@@ -11,6 +11,7 @@
 package Log::Stream::File::Gzip;
 
 use 5.010;
+use autodie;
 use strict;
 use warnings;
 
@@ -18,7 +19,6 @@ use warnings;
 use base qw(Log::Stream);
 
 use Carp qw(croak);
-use IO::Uncompress::Gunzip ();
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -27,13 +27,25 @@ our $VERSION = '1.00';
 # Implementation
 ##############################################################################
 
+# Internal helper function to spawn a gzip process to read the given file.
+#
+# $file - File to uncompress
+#
+# Returns: File descriptor of running gzip process.
+sub _gunzip {
+    my ($file) = @_;
+    open(my $fh, q{-|}, 'gzip', '-dc', $file);
+    return $fh;
+}
+
 # Create a new Log::Stream::File::Gzip object from the provided files.
 #
 # $class - Class of the object being created
 # $args  - Anonymous hash of arguments, with files as the only supported key
 #
 # Returns: New Log::Stream::File::Gzip object
-#  Throws: Text exception for invalid arguments
+#  Throws: Text exception for invalid arguments or gzip failure
+#          autodie::exception if forking gzip fails
 sub new {
     my ($class, $args) = @_;
 
@@ -45,27 +57,24 @@ sub new {
     if (!@files) {
         croak('Empty files argument to new');
     }
-    my $start = shift(@files);
-    my $fh    = IO::Uncompress::Gunzip->new($start);
-    if (!defined($fh)) {
-        croak("Cannot open $start: $IO::Uncompress::Gunzip::GunzipError");
-    }
+    my $file = shift(@files);
+    my $fh   = _gunzip($file);
 
     # Our generator code reads from each file in turn until hitting end of
-    # file and then opens the next one.  IO::Uncompress::Gunzip returns an
-    # empty string (with no newline) for an empty file instead of undef.
+    # file and then opens the next one.  We have to check if gunzip failed and
+    # abort.
     my $code = sub {
         my $line;
       LINE: {
-            $line = $fh->getline;
-            if (!defined($line) || $line eq q{}) {
-                return if !@files;
-                my $file = shift(@files);
-                $fh = IO::Uncompress::Gunzip->new($file);
-                if (!defined($fh)) {
-                    my $error = $IO::Uncompress::Gunzip::GunzipError;
-                    croak("Cannot open $file: $error");
+            $line = readline($fh);
+            if (!defined($line)) {
+                eval { close($fh) };
+                if ($? != 0) {
+                    croak("gzip -dc $file failed with exit status $?");
                 }
+                return if !@files;
+                $file = shift(@files);
+                $fh   = _gunzip($file);
                 redo LINE;
             }
         }

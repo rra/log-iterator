@@ -90,18 +90,34 @@ is($stream, undef, 'Creation failed empty files argument');
 like($@, qr{ \A Empty [ ] files [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
     '...error');
 
-# Test handling of IO::Uncompress::Gunzip errors.
+# A single nonexistent file.
+open(my $olderr, '>&', \*STDERR) or BAIL_OUT("Cannot save STDERR: $!");
+close(STDERR) or BAIL_OUT("Cannot close STDERR: $!");
 $stream
   = eval { Log::Stream::File::Gzip->new({ files => ['./nonexistent'] }) };
+open(STDERR, '>&', $olderr) or BAIL_OUT("Cannot restore STDERR: $!");
+close($olderr) or BAIL_OUT("Cannot close saved error: $!");
 is($stream, undef, 'Creation failed with nonexistent file');
-like($@, qr{ \A Cannot [ ] open [ ] [.] /nonexistent: }xms, '...error');
+like(
+    $@,
+    qr{ \A gzip [ ] -dc [ ] [.] /nonexistent [ ] failed [ ] with [ ] exit
+        [ ] status [ ] \d+ [ ] at [ ] }xms,
+    '...error'
+);
+
+# Multiple files, the last of which is nonexistent.
+open($olderr, '>&', \*STDERR) or BAIL_OUT("Cannot save STDERR: $!");
+close(STDERR) or BAIL_OUT("Cannot close STDERR: $!");
 $stream = Log::Stream::File::Gzip->new({ files => [$path, './nonexistent'] });
 local $@ = undef;
 while ($stream->head && !$@) {
     eval { $stream->get };
 }
+open(STDERR, '>&', $olderr) or BAIL_OUT("Cannot restore STDERR: $!");
+close($olderr) or BAIL_OUT("Cannot close saved error: $!");
 like(
     $@,
-    qr{ \A Cannot [ ] open [ ] [.] /nonexistent: }xms,
+    qr{ \A gzip [ ] -dc [ ] [.] /nonexistent [ ] failed [ ] with [ ] exit
+        [ ] status [ ] \d+ [ ] at [ ] }xms,
     'Error when opening nonexistent file'
 );
