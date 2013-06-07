@@ -89,7 +89,7 @@
         query      => '/webkdc-service/',
         status     => '200',
         size       => '4991',
-        user_agent => 'libwww-perl/5.836',
+        user_agent => 'Quote"Agent',
     },
     {
         timestamp  => 1358840872,
