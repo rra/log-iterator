@@ -74,7 +74,7 @@ Readonly::Scalar my $APACHE_ERROR_REGEX => qr{
       (?> \s+ $CLIENT_REGEX )?
       \s+ (.+)
     \z
-}xms;
+}xmso;
 
 # Cache the last converted timestamp and its result.
 my $CACHE_TIMESTAMP = q{};
@@ -129,7 +129,7 @@ sub _parse_timestamp {
 # Returns: The corresponding data structure or an empty hash on parse failure
 sub parse {
     my ($self, $line) = @_;
-    if ($line =~ m{ $APACHE_ERROR_REGEX }oxms) {
+    if ($line =~ m{ $APACHE_ERROR_REGEX }xmso) {
         my ($timestamp, $level, $client, $data) = ($1, $2, $3, $4);
         $timestamp = _parse_timestamp($timestamp);
         return {} if !defined($timestamp);
