@@ -17,6 +17,8 @@ use warnings;
 
 use base qw(Log::Stream);
 
+use Scalar::Util qw(reftype);
+
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
@@ -35,19 +37,34 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $transform, $stream) = @_;
 
-    # Wrap the provided transform in a sub that handles undef.
-    my $code = sub {
-        my $head = $stream->get;
-        if (defined $head) {
-            local $_ = $head;
-            return $transform->($head);
+    # Grab the head and tail out of the stream.
+    my $head = $stream->head;
+    my $tail = $stream->tail;
+
+    # Transform the head.
+    local $_ = $head;
+    $head = $transform->($head);
+
+    # Turn the transform into a promise.
+    my $code;
+    $code = sub {
+        if (reftype($tail) eq 'CODE') {
+            $tail = $tail->();
+        }
+        if (defined($tail)) {
+            my $next;
+            ($next, $tail) = @{$tail};
+            local $_ = $next;
+            return [$transform->($next), $code];
         } else {
             return;
         }
     };
 
     # Build and return the object.
-    return $class->SUPER::new({ code => $code });
+    my $self = [$head, $code];
+    bless($self, $class);
+    return $self;
 }
 
 ##############################################################################

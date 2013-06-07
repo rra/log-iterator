@@ -11,7 +11,6 @@
 package Log::Stream;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
@@ -37,68 +36,71 @@ sub new {
     my ($class, $args) = @_;
 
     # Ensure we were given a valid code argument.
-    if (!defined $args->{code}) {
+    my $code = $args->{code};
+    if (!$code) {
         croak('Missing code argument to new');
     }
-    my $type = reftype($args->{code});
-    if (!$type || $type ne 'CODE') {
+    my $type = reftype($code);
+    if (!defined($type) || $type ne 'CODE') {
         croak('code argument to new is not a code reference');
     }
 
-    # Build and return the object.
-    my $self = {
-        head => undef,
-        tail => $args->{code},
+    # Code is a generator.  We want to turn it into a promise which, when
+    # called, returns an empty anonymous array if the generator has been
+    # exhausted or an array of the next value and the promise.
+    my $tail;
+    $tail = sub {
+        my $head = $code->();
+        if (defined($head)) {
+            return [$head, $tail];
+        } else {
+            return;
+        }
     };
-    bless $self, $class;
+
+    # The first result of that call is the initial object.
+    my $self = $tail->() || [];
+    bless($self, $class);
     return $self;
 }
 
-# Internal helper function to set the head element.  This handles deferred
-# processing of head: if head is currently undef but tail is defined, calls
-# the tail function to generate the head element.  Also handles clearing the
-# tail function once it returns undef.
+# Returns the head of the stream without consuming it.
 #
 # $self - The Log::Stream object
 #
-# Returns: undef
-sub _set_head {
-    my ($self) = @_;
-    return if defined $self->{head};
-    return if !defined $self->{tail};
-    $self->{head} = $self->{tail}->();
-    if (!defined $self->{head}) {
-        $self->{tail} = undef;
-    }
-    return;
-}
-
-# Returns the next line in the stream without consuming it.  If head is undef,
-# that means we've not read the next line yet, so we internally use get() to
-# read it.
-#
-# $self - The Log::Stream object
-#
-# Returns: Current value of head
+# Returns: Current head of the stream
 sub head {
     my ($self) = @_;
-    $self->_set_head;
-    return $self->{head};
+    return $self->[0];
 }
 
-# Returns the next line in the stream and consumes it.  The tail sub is asked
-# for the next head.  As soon as tail returns undef, we close the stream (by
-# setting tail to undef).
+# Returns the tail of the stream.  This forces the promise, if any, and
+# returns an anonymous array of the next element and the promise, or just the
+# next element if the promise is exhausted.
 #
 # $self - The Log::Stream object
 #
-# Returns: Current value of head
-#  Throws: autodie::exception on I/O failure
+# Returns: Current tail of the stream
+sub tail {
+    my ($self) = @_;
+    if ($self->[1]) {
+        $self->[1] = $self->[1]->();
+    }
+    return $self->[1];
+}
+
+# Returns the next line in the stream and consumes it.  The tail becomes the
+# new contents of the stream.  Note that we leave any elements after the first
+# two in the object alone so that subclasses can use them for other storage.
+#
+# $self - The Log::Stream object
+#
+# Returns: Current head of the stream
 sub get {
     my ($self) = @_;
-    $self->_set_head;
-    my $head = $self->{head};
-    $self->{head} = undef;
+    my $head   = $self->[0];
+    my $tail   = $self->tail;
+    @{$self}[0, 1] = $tail ? @{$tail} : ();
     return $head;
 }
 

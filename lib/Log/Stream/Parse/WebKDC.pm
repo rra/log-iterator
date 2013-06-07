@@ -24,7 +24,7 @@ our $VERSION = '1.00';
 
 # Regex to parse a key/value pair in a WebKDC event log.  Returns the key as
 # $1 and the value as $2 or $3.
-Readonly my $PAIR_REGEX => qr{
+Readonly::Scalar my $PAIR_REGEX => qr{
     ([^=\s]+)                           # key
     =
     (?:                                 # two possible value types

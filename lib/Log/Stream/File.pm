@@ -39,14 +39,14 @@ sub new {
 
     # Ensure we were given a valid files argument and open the first file.
     ## no critic (InputOutput::RequireBriefOpen)
-    if (!defined $args->{files}) {
+    if (!defined($args->{files})) {
         croak('Missing files argument to new');
     }
-    my @files = ref $args->{files} ? @{ $args->{files} } : ($args->{files});
+    my @files = ref($args->{files}) ? @{ $args->{files} } : ($args->{files});
     if (!@files) {
         croak('Empty files argument to new');
     }
-    open my $fh, q{<}, shift @files;
+    open(my $fh, q{<}, shift(@files));
 
     # Our generator code reads from each file in turn until hitting end of
     # file and then opens the next one.
@@ -54,13 +54,13 @@ sub new {
         my $line;
       LINE: {
             $line = $fh->getline;
-            if (!defined $line) {
+            if (!defined($line)) {
                 return if !@files;
-                open $fh, q{<}, shift @files;
+                open($fh, q{<}, shift(@files));
                 redo LINE;
             }
         }
-        chomp $line;
+        chomp($line);
         return $line;
     };
 

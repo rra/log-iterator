@@ -41,7 +41,7 @@ Readonly my %MONTH_TO_NUM => (
 
 # Regex matching an Apache log timestamp.  Returns the timestamp (without the
 # day of the week) as $1.
-Readonly my $TIMESTAMP_REGEX => qr{
+Readonly::Scalar my $TIMESTAMP_REGEX => qr{
     \[
       \w{3} \s+                 # Day of the week
       (                         # Start of interesting timestamp
@@ -54,10 +54,12 @@ Readonly my $TIMESTAMP_REGEX => qr{
 }xms;
 
 # Regex matching an Apache log level.  Returns the log level as $1.
-Readonly my $LEVEL_REGEX => qr{ \[ (\w+) \] }xms;
+Readonly::Scalar my $LEVEL_REGEX => qr{ \[ (\w+) \] }xms;
 
 # Regex matching a client IP address.  Returns the IP address as $1.
-Readonly my $CLIENT_REGEX => qr{ \[ client \s+ ([[:xdigit:].:]+) \] }xms;
+Readonly::Scalar my $CLIENT_REGEX => qr{
+    \[ client \s+ ([[:xdigit:].:]+) \]
+}xms;
 
 # Regex matching a whole Apache error log line.  Returns:
 #
@@ -65,7 +67,7 @@ Readonly my $CLIENT_REGEX => qr{ \[ client \s+ ([[:xdigit:].:]+) \] }xms;
 #     $2 - Log level
 #     $3 - Client IP address (may be empty)
 #     $4 - Rest of the log line
-Readonly my $APACHE_ERROR_REGEX => qr{
+Readonly::Scalar my $APACHE_ERROR_REGEX => qr{
     \A
       $TIMESTAMP_REGEX
       \s+ $LEVEL_REGEX
@@ -95,8 +97,8 @@ sub _parse_timestamp {
     # last time we were called, return the same value.  We normally process
     # logs in sequence, so doing more memoization is pointless and just bloats
     # memory usage.
-    if ($self->{last_timestamp} && $timestamp eq $self->{last_timestamp}) {
-        return $self->{last_time};
+    if ($self->[2] && $timestamp eq $self->[2]) {
+        return $self->[3];
     }
 
     # Parse the timestamp and map it to localtime values.
@@ -108,8 +110,8 @@ sub _parse_timestamp {
     my $time = timelocal($sec, $min, $hour, $mday, $mon, $year);
 
     # Cache for the next run.
-    $self->{last_timestamp} = $timestamp;
-    $self->{last_time}      = $time;
+    $self->[2] = $timestamp;
+    $self->[3] = $time;
     return $time;
 }
 

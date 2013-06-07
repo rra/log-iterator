@@ -40,7 +40,8 @@ sub new {
     my ($class, $stream, $args) = @_;
 
     # Pre-create $self so that we can refer to it in the transform closure.
-    my $self = {};
+    my $self = [];
+    bless($self, $class);
 
     # Delegate the stream transformation to our parse() method.  We set things
     # up this way because it ensures method lookup will work properly for our
@@ -63,7 +64,7 @@ sub new {
     # Log::Stream::Transform, so we have to reconsecrate the final object.
     $self = $class->SUPER::new($transform, $stream);
     $self = Log::Stream::Filter->new($filter, $self);
-    bless $self, $class;
+    bless($self, $class);
     return $self;
 }
 

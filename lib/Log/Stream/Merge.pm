@@ -36,28 +36,46 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $code, @streams) = @_;
 
-    # If no code was provided, we provide our own.
-    my $tail;
+    # See if we have a code reference to merge the values.
     my $type = reftype($code);
     if (!$type || $type ne 'CODE') {
-        unshift @streams, $code;
-        $tail = sub {
-            my $stream;
-            ($stream, @streams) = grep { defined $_->head } @streams;
-            return if !defined $stream;
-            my $head = $stream->get;
-            push @streams, $stream;
-            return $head;
-        };
+        unshift(@streams, $code);
+        $code = undef;
     }
 
-    # Otherwise, wrap the user-provided code in a closure with @streams.
+    # Filter out all of the empty streams.
+    @streams = grep { defined($_->head) } @streams;
+
+    # If code was provided, we have to keep references to all of the
+    # underlying streams and turn the provided code into a closure.
+    if ($code) {
+        my $closure = sub { return $code->(@streams) };
+        return $class->SUPER::new({ code => $closure });
+    }
+
+    # Otherwise, if no code was provided, we can provide a very efficient
+    # merge that doesn't keep any of the underlying streams.
     else {
-        $tail = sub { return $code->(@streams) };
+        @streams = map { [$_->head, $_->tail] } @streams;
+        my $promise;
+        $promise = sub {
+            my $stream;
+            ($stream, @streams) = @streams;
+            return if !defined($stream);
+            return $stream if !@streams;
+            my $tail = $stream->[1];
+            if (reftype($tail) eq 'CODE') {
+                $tail = $tail->();
+            }
+            if (defined($tail)) {
+                push(@streams, $tail);
+            }
+            return [$stream->[0], $promise];
+        };
+        my $self = $promise->() || [];
+        bless($self, $class);
+        return $self;
     }
-
-    # Build and return the object.
-    return $class->SUPER::new({ code => $tail });
 }
 
 ##############################################################################

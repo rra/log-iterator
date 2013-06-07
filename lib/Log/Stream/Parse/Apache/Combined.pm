@@ -43,7 +43,7 @@ Readonly my %MONTH_TO_NUM => (
 # Build a CSV parser for the Apache access logs.  The quote and escape syntax
 # is something that Text::CSV can deal with, and it is much, much faster than
 # using regular expressions.
-Readonly my $CSV_PARSER => Text::CSV->new(
+Readonly::Scalar my $CSV_PARSER => Text::CSV->new(
     {
         sep_char    => q{ },
         quote_char  => q{"},    #"# cperl-mode
@@ -54,7 +54,7 @@ Readonly my $CSV_PARSER => Text::CSV->new(
 # Regex to parse the query string.  We could use Text::CSV for this as well,
 # but that doesn't handle weird cases such as unescaped double quotes in the
 # query.
-Readonly my $QUERY_STRING_REGEX => qr{
+Readonly::Scalar my $QUERY_STRING_REGEX => qr{
     \A
     (?> ( [[:upper:]]+ ) \s+ )  # method (1)
     ( \S+ )                     # query itself (2)
@@ -83,13 +83,13 @@ sub _parse_timestamp {
     # as the last time we were called, return the same value.  We normally
     # process logs in sequence, so doing more memoization is pointless and
     # just bloats memory usage.
-    if ($self->{last_timestamp} && $timestamp eq $self->{last_timestamp}) {
-        return $self->{last_time};
+    if ($self->[2] && $timestamp eq $self->[2]) {
+        return $self->[3];
     }
 
     # Parse the timestamp and map it to localtime values.
-    my ($mday, $mon, $year, $hour, $min, $sec, $zone) = split m{[/: ]}xms,
-      $timestamp;
+    my ($mday, $mon, $year, $hour, $min, $sec, $zone)
+      = split(m{[/: ]}xms, $timestamp);
     $mon = $MONTH_TO_NUM{$mon};
     $year -= 1900;
 
@@ -104,8 +104,8 @@ sub _parse_timestamp {
     $time -= $zone_sign * ($zone_hour * 60 + $zone_min) * 60;
 
     # Cache for the next run.
-    $self->{last_timestamp} = $timestamp;
-    $self->{last_time}      = $time;
+    $self->[2] = $timestamp;
+    $self->[3] = $time;
     return $time;
 }
 

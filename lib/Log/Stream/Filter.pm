@@ -17,6 +17,8 @@ use warnings;
 
 use base qw(Log::Stream);
 
+use Scalar::Util qw(reftype);
+
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
 
@@ -35,21 +37,39 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $filter, $stream) = @_;
 
-    # Wrap the provided filter in a sub that loops until a valid stream value
-    # is found.
-    my $code = sub {
-        my $head;
-      ELEMENT: {
-            $head = $stream->get;
-            return if !defined $head;
-            local $_ = $head;
-            redo ELEMENT if !$filter->($head);
-        }
-        return $head;
-    };
+    # Find the next valid object in the stream.  We do this in a slightly
+    # roundabout way, rather than using get, so that we leave the stream in a
+    # state where the head is the next matching object and we don't have a
+    # stray head we have to deal with.
+    my $head = $stream->head;
+    local $_ = $head;
+    while (defined($head) && !$filter->($head)) {
+        $stream->get;
+        $head = $stream->head;
+        $_    = $head;
+    }
+
+    # If there's a remaining tail, wrap it in a promise.
+    my $tail = $stream->tail;
+    my $code;
+    if (defined($tail)) {
+        $code = sub {
+            my $next;
+          ELEMENT: {
+                return if !$tail;
+                ($next, $tail) = @{$tail};
+                $tail = $tail->();
+                local $_ = $next;
+                redo ELEMENT if !$filter->($next);
+            }
+            return [$next, $code];
+        };
+    }
 
     # Build and return the object.
-    return $class->SUPER::new({ code => $code });
+    my $self = [$head, $code];
+    bless($self, $class);
+    return $self;
 }
 
 ##############################################################################
