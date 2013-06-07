@@ -13,7 +13,7 @@ use autodie;
 use strict;
 use warnings;
 
-use Test::More tests => 74;
+use Test::More tests => 79;
 
 # Load the modules.
 BEGIN {
@@ -157,3 +157,12 @@ is($stream->get, 'third', 'get() returns third');
 ok($stream->prepend(), 'Prepend of nothing succeeds');
 is($stream->head, 'fourth', 'Head is now fourth');
 is($stream->get,  'fourth', '...and get() returns fourth');
+
+# Test starting with an empty stream.
+$code = sub { return };
+$stream = Log::Stream::Rewindable->new(Log::Stream->new({ code => $code }));
+isa_ok($stream, 'Log::Stream::Rewindable');
+is($stream->head, undef, 'Head of empty stream is undef');
+ok($stream->prepend('first'), 'Prepending to an empty stream works');
+is($stream->head, 'first', 'Head is now first');
+is($stream->get,  'first', '... and get returns first');
