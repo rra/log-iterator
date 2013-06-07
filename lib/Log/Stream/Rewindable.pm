@@ -49,25 +49,21 @@ sub new {
     my $head      = $stream->head;
     my $generator = $stream->generator;
 
-    # If there is no head, start with a very simple stream.
-    my $self = [];
-    if (!defined($head)) {
-        bless($self, $class);
-        return $self;
-    }
-
     # Our promise reads from the queue by preference.  Bookmarking has to be
     # done in get(), since we don't want to save the head element.
-    my $code;
-    $code = sub {
+    my $self = [];
+    my $code = sub {
         my $next;
         if ($self->[3]) {
             $next = pop(@{ $self->[3] });
             if (!@{ $self->[3] }) {
                 $self->[3] = undef;
             }
-        } else {
+        } elsif ($generator) {
             $next = $generator->();
+            if (!defined($next)) {
+                $generator = undef;
+            }
         }
         return $next;
     };
@@ -110,7 +106,9 @@ sub discard {
 }
 
 # Override get to store retrieved objects in the saved array if we have a
-# bookmark set.  We have a bookmark iff $self->[2] is present.
+# bookmark set and to not destroy our generator when we run out of elements,
+# since our generator can come back to life on rewind or prepend.  We have a
+# bookmark iff $self->[2] is present.
 #
 # $self - The Log::Stream::Rewindable object
 #
@@ -120,9 +118,6 @@ sub get {
     my $head = $self->[0];
     return if !defined($head);
     $self->[0] = $self->[1]->();
-    if (!defined($self->[0])) {
-        $self->[1] = undef;
-    }
     if ($self->[2]) {
         push(@{ $self->[2] }, $head);
     }
@@ -153,25 +148,8 @@ sub prepend {
     $self->[3] ||= [];
     push(@{ $self->[3] }, reverse(@elements));
 
-    # If the stream was empty, we destroyed the tail.  Rebuild it.
-    my $tail = $self->[1];
-    if (!defined($tail)) {
-        $tail = sub {
-            my $queue = $self->[3];
-            return if !$queue;
-            if (@{$queue} == 1) {
-                my $head = $queue->[0];
-                $self->[3] = undef;
-                return $head;
-            } else {
-                return pop(@{$queue});
-            }
-        };
-    }
-
-    # Now, rebuild the object from the tail.
-    $self->[0] = $tail->();
-    $self->[1] = $tail;
+    # Now, rebuild our head element.
+    $self->[0] = $self->[1]->();
     return 1;
 }
 
