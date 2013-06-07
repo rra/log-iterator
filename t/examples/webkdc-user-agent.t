@@ -59,7 +59,7 @@ run_output_matches('webkdc-user-agent', [$webkdc, $access],
 
 # Test reporting using the CSV file as input.
 run_output_matches('webkdc-user-agent', ['-i', $csv_output],
-    [@expected], q{}, 'webkdc-user-agent report');
+    [@expected], q{}, 'webkdc-user-agent report -i');
 
 # Suppress "only used once" warnings.
 END { @Test::Script::Run::BIN_DIRS = () }
