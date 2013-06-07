@@ -36,11 +36,11 @@ my $WANT_VERSION = 1;
 # Regex matching URLs that may be used for WebAuth logins.  This could be
 # site-specific if one doesn't use the default recommended URL, but currently
 # isn't configurable without editing the script.
-Readonly my $LOGIN_URL_REGEX => qr{ /login/? }xms;
+Readonly::Scalar my $LOGIN_URL_REGEX => qr{ /login/? }xms;
 
 # How many seconds after the error log entry to look for a corresponding
 # access log entry.  This bound will also bound our memory consumption.
-Readonly my $TIMEOUT => 2;
+Readonly::Scalar my $TIMEOUT => 2;
 
 # Our log merge routine.
 #
@@ -140,10 +140,10 @@ sub build_csv_stream {
             die "Cannot parse line: $line\n";
         }
         my @values = $csv->fields;
-        if (scalar(@values) != scalar @fields) {
+        if (scalar(@values) != scalar(@fields)) {
             die "Incorrect number of fields on line: $line\n";
         }
-        return { mesh @fields, @values };
+        return { mesh(@fields, @values) };
     };
 
     # Wrap the stream in that parser and return it.
