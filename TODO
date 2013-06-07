@@ -37,6 +37,3 @@ Testing:
  * Factor out the first stream creation and error checking into a library.
 
  * Factor out the basic file test and reuse the code in the gzip.t test.
-
- * Find examples of Apache and WebKDC logs with backslashes in quoted
-   strings and add them to the test suite.
