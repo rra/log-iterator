@@ -15,7 +15,7 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 31;
+use Test::More tests => 33;
 
 # Load the modules.
 BEGIN {
@@ -84,8 +84,16 @@ is($stream->head, q{}, 'head() is the empty string at end of streams');
 is($stream->get,  q{}, 'get() is the empty string at end of streams');
 is($stream->get,  q{}, '...and just keeps returning the empty string');
 
+# Test the merge of two empty streams with the default merge.
+my $empty = sub { return };
+$stream_one = Log::Stream->new({ code => $empty });
+$stream_two = Log::Stream->new({ code => $empty });
+$stream = Log::Stream::Merge->new($stream_one, $stream_two);
+isa_ok($stream, 'Log::Stream::Merge');
+is($stream->head, undef, 'head is undef when merging two empty streams');
+
 # Test a seldom-seen error branch in the constructor.  This would blow up
 # later anyway, but we want 100% coverage.  Eventually, we should test that
-# our streams can get().
-$stream = Log::Stream::Merge->new('some string');
-isa_ok($stream, 'Log::Stream::Merge');
+# our streams can get.
+$stream = eval { Log::Stream::Merge->new('some string') };
+is($stream, undef, 'Creation failed with a bad code argument');
