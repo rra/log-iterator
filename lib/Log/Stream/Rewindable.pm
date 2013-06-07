@@ -117,8 +117,13 @@ sub discard {
 # Returns: Current value of head
 sub get {
     my ($self) = @_;
-    my $head = $self->SUPER::get;
-    if ($self->[2] && defined($head)) {
+    my $head = $self->[0];
+    return if !defined($head);
+    $self->[0] = $self->[1]->();
+    if (!defined($self->[0])) {
+        $self->[1] = undef;
+    }
+    if ($self->[2]) {
         push(@{ $self->[2] }, $head);
     }
     return $head;
