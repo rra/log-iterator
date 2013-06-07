@@ -16,6 +16,7 @@ use warnings;
 
 use base qw(Log::Stream::Parse);
 
+use Carp qw(croak);
 use Readonly;
 use Time::Local qw(timelocal);
 
@@ -23,7 +24,7 @@ use Time::Local qw(timelocal);
 our $VERSION = '1.00';
 
 # Map of month names to localtime month numbers.
-Readonly my %MONTH_TO_NUM => (
+my %MONTH_TO_NUM = (
     Jan => 0,
     Feb => 1,
     Mar => 2,
@@ -75,6 +76,10 @@ Readonly::Scalar my $APACHE_ERROR_REGEX => qr{
     \z
 }xms;
 
+# Cache the last converted timestamp and its result.
+my $CACHE_TIMESTAMP = q{};
+my $CACHE_RESULT;
+
 ##############################################################################
 # Implementation
 ##############################################################################
@@ -90,27 +95,28 @@ Readonly::Scalar my $APACHE_ERROR_REGEX => qr{
 #
 # Returns: The timestamp in seconds since epoch
 sub _parse_timestamp {
-    my ($self, $timestamp) = @_;
+    my ($timestamp) = @_;
 
     # Do memoization with a single cache.  If we saw the same timestamp as the
     # last time we were called, return the same value.  We normally process
     # logs in sequence, so doing more memoization is pointless and just bloats
     # memory usage.
-    if ($self->[2] && $timestamp eq $self->[2]) {
-        return $self->[3];
-    }
+    return $CACHE_RESULT if $timestamp eq $CACHE_TIMESTAMP;
 
     # Parse the timestamp and map it to localtime values.
     my ($mon, $mday, $hour, $min, $sec, $year) = split m{[ :]+}xms, $timestamp;
-    $mon = $MONTH_TO_NUM{$mon};
     $year -= 1900;
 
     # Convert assuming the current local time zone.
-    my $time = timelocal($sec, $min, $hour, $mday, $mon, $year);
+    my $time = eval {
+        $mon = $MONTH_TO_NUM{$mon};
+        timelocal($sec, $min, $hour, $mday, $mon, $year);
+    };
+    return if $@;
 
     # Cache for the next run.
-    $self->[2] = $timestamp;
-    $self->[3] = $time;
+    $CACHE_TIMESTAMP = $timestamp;
+    $CACHE_RESULT    = $time;
     return $time;
 }
 
@@ -125,7 +131,8 @@ sub parse {
     my ($self, $line) = @_;
     if ($line =~ m{ $APACHE_ERROR_REGEX }oxms) {
         my ($timestamp, $level, $client, $data) = ($1, $2, $3, $4);
-        $timestamp = $self->_parse_timestamp($timestamp);
+        $timestamp = _parse_timestamp($timestamp);
+        return {} if !defined($timestamp);
         my $result = {
             timestamp => $timestamp,
             level     => $level,

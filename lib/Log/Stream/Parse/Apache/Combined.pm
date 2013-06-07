@@ -16,6 +16,7 @@ use warnings;
 
 use base qw(Log::Stream::Parse);
 
+use Carp qw(croak);
 use Readonly;
 use Time::Local qw(timegm);
 use Text::CSV;
@@ -24,7 +25,7 @@ use Text::CSV;
 our $VERSION = '1.00';
 
 # Map of month names to localtime month numbers.
-Readonly my %MONTH_TO_NUM => (
+my %MONTH_TO_NUM = (
     Jan => 0,
     Feb => 1,
     Mar => 2,
@@ -38,6 +39,10 @@ Readonly my %MONTH_TO_NUM => (
     Nov => 10,
     Dec => 11,
 );
+
+# Order of fields in an Apache log line, omitting timestamp (which will come
+# between ident_user and query).
+my @FIELDS = qw(client user ident_user query status size referrer user_agent);
 
 # Build a CSV parser for the Apache access logs.  The quote and escape syntax
 # is something that Text::CSV can deal with, and it is much, much faster than
@@ -61,6 +66,10 @@ Readonly::Scalar my $QUERY_STRING_REGEX => qr{
     \z
 }xms;
 
+# Cache the last converted timestamp and its result.
+my $CACHE_TIMESTAMP = q{};
+my $CACHE_RESULT;
+
 ##############################################################################
 # Implementation
 ##############################################################################
@@ -69,31 +78,36 @@ Readonly::Scalar my $QUERY_STRING_REGEX => qr{
 # since epoch.  Do this with hand-rolled code, since str2time is rather slow
 # and excessively complex when we already know the exact format.
 #
-# A timestamp looks like "03/Feb/2013:07:04:23 -0800".
+# A timestamp looks like "[03/Feb/2013:07:04:23 -0800]" and we get it in two
+# parts, broken on the space.
 #
 # $self      - The parser object
 # $timestamp - The text timestamp from the log file
 #
 # Returns: The timestamp in seconds since epoch
 sub _parse_timestamp {
-    my ($self, $timestamp) = @_;
+    my ($timestamp, $zone) = @_;
 
     # Do memoization with a single cached value.  If we saw the same timestamp
     # as the last time we were called, return the same value.  We normally
     # process logs in sequence, so doing more memoization is pointless and
     # just bloats memory usage.
-    if ($self->[2] && $timestamp eq $self->[2]) {
-        return $self->[3];
-    }
+    my $key = $timestamp . $zone;
+    return $CACHE_RESULT if $key eq $CACHE_TIMESTAMP;
 
     # Parse the timestamp and map it to localtime values.
-    my ($mday, $mon, $year, $hour, $min, $sec, $zone)
-      = split(m{[/: ]}xms, $timestamp);
-    $mon = $MONTH_TO_NUM{$mon};
+    my ($mday, $mon, $year, $hour, $min, $sec)
+      = split(m{[/: ]}xms, substr($timestamp, 1));
     $year -= 1900;
+    chop($zone);
 
     # Convert assuming a GMT time.
-    my $time = timegm($sec, $min, $hour, $mday, $mon, $year);
+    my $time = eval {
+        local $SIG{__WARN__} = sub { croak($_[0]) };
+        $mon = $MONTH_TO_NUM{$mon};
+        timegm($sec, $min, $hour, $mday, $mon, $year);
+    };
+    return if $@;
 
     # Handle the time zone offset.  Note that the zone is [+-]HHMM, not a
     # quantity of seconds.
@@ -103,8 +117,8 @@ sub _parse_timestamp {
     $time -= $zone_sign * ($zone_hour * 60 + $zone_min) * 60;
 
     # Cache for the next run.
-    $self->[2] = $timestamp;
-    $self->[3] = $time;
+    $CACHE_TIMESTAMP = $key;
+    $CACHE_RESULT    = $time;
     return $time;
 }
 
@@ -131,75 +145,48 @@ sub parse {
     # Parsing this way and determining what we have from numeric field counds
     # is kind of ugly, but it saves about 25% of the run time compared to
     # parsing more directly with regular expressions.
-    my (
-        $vhost,        $client, $user, $ident_user, $timestamp,
-        $query_string, $status, $size, $referrer,   $user_agent
-    );
     my @fields = $CSV_PARSER->fields;
 
     # If the log format added extra fields at the end, ignore them.
     if (@fields > 11) {
-        @fields = @fields[0 .. 9];
+        @fields = @fields[0 .. 10];
     }
 
-    # Hopefully detect the presence of the vhost by the field count.
+    # If there are too few fields, consider this unparsable.
+    return {} if @fields < 8;
+
+    # If there are an odd number of fields, we have a leading virtual host.
+    my $vhost;
     if (@fields == 9 || @fields == 11) {
         $vhost = shift(@fields);
     }
 
-    # Pull out the rest of the fields and strip [] off of the timestamp.
-    ($client, $user, $ident_user) = @fields[0 .. 2];
-    $timestamp = join(q{ }, @fields[3 .. 4]);
-    $timestamp =~ tr{[]}{}d;
-    ($query_string, $status, $size, $referrer, $user_agent) = @fields[5 .. 9];
+    # Pull out the timestamp and parse it.  We also use this as our sanity
+    # check to ensure that the line is a valid Apache log line.
+    my $timestamp = _parse_timestamp(splice(@fields, 3, 2));
+    return {} if !defined($timestamp);
 
-    # Sanity check.  The size field is the last mandatory field and must be
-    # numeric or we assume we can't parse this line.
-    if (!defined($size) || $size !~ m{ \A \d+ \z }xms) {
-        return {};
+    # Store the rest of the fields.
+    my %result;
+  FIELD:
+    for my $i (0 .. $#fields) {
+        next FIELD if $fields[$i] eq q{-};
+        $result{ $FIELDS[$i] } = $fields[$i];
     }
-
-    # Flesh out the basic information.
-    $timestamp = $self->_parse_timestamp($timestamp);
-    my $result = {
-        timestamp => $timestamp,
-        client    => $client,
-        status    => $status,
-        size      => $size,
-    };
-
-    # Optional information.  Only add the key if we have a useful value.
-    if (defined $vhost) {
-        $result->{vhost} = $vhost;
-    }
-    if ($user ne q{-}) {
-        $result->{user} = $user;
-    }
-    if ($ident_user ne q{-}) {
-        $result->{ident_user} = $ident_user;
-    }
-    if (defined($referrer) && $referrer ne q{-}) {
-        $result->{referrer} = $referrer;
-    }
-    if (defined($user_agent) && $user_agent ne q{-}) {
-        $result->{user_agent} = $user_agent;
-    }
+    $result{vhost}     = $vhost;
+    $result{timestamp} = $timestamp;
 
     # Parse the query string.
-    if ($query_string =~ m{ $QUERY_STRING_REGEX }xmso) {
+    if ($result{query} =~ m{ $QUERY_STRING_REGEX }xmso) {
         my ($method, $query, $protocol) = ($1, $2, $3);
         my $base_query = $query;
         $base_query =~ s{ [?] .* }{}xms;
-        $result->{method}     = $method;
-        $result->{query}      = $query;
-        $result->{base_query} = $base_query;
-        if (defined($protocol)) {
-            $result->{protocol} = $protocol;
-        }
-    } else {
-        $result->{query} = $query_string;
+        $result{method}     = $method;
+        $result{query}      = $query;
+        $result{base_query} = $base_query;
+        $result{protocol}   = $protocol;
     }
-    return $result;
+    return \%result;
 }
 
 ##############################################################################
@@ -315,7 +302,9 @@ key will be absent if there was no user agent information.
 
 =back
 
-Unparsable lines will be silently skipped.
+Unparsable lines will be silently skipped.  Note that keys may exist with
+undefined values even if the data in question wasn't present in that line
+of the log.
 
 This object, and any classes derived from it, complies with the
 Log::Stream interface and can be wrapped in Log::Stream::Filter or

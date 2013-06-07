@@ -58,14 +58,14 @@ if ($!) {
 for my $i (0 .. $#RESULT) {
     my $log_record = $RESULT[$i];
     is_deeply($stream->head, $log_record, "Head of line $i");
-    my $stream_record = $stream->get;
-    is_deeply($stream_record, $log_record, "Get of line $i");
+    is_deeply($stream->get,  $log_record, "Get of line $i");
 }
 is($stream->head, undef, 'Undef from head at end of file');
 is($stream->get,  undef, 'Undef from get at end of file');
 
 # Test a bunch of timestamp conversions directly.  We can only test if we can
 # force a time zone, since the date format doesn't include the time zone.
+## no critic (Variables::ProtectPrivateVars)
 local $ENV{TZ} = 'PST8PDT';
 SKIP: {
     my $time = timelocal(23, 4, 7, 3, 1, 113);
@@ -84,17 +84,18 @@ SKIP: {
         'Jan 01 00:00:00 1970' => 28_800,
         'Dec 31 16:00:00 1969' => 0,
     );
+    my $parse = \&Log::Stream::Parse::Apache::Error::_parse_timestamp;
     for my $timestamp (sort keys %timestamp_to_time) {
         my $wanted = $timestamp_to_time{$timestamp};
-        is($stream->_parse_timestamp($timestamp),
-            $wanted, "Parse of $timestamp");
+        is($parse->($timestamp), $wanted, "Parse of $timestamp");
     }
 
     # Time during daylight savings is ambiguous.  Allow either.
-    $time = $stream->_parse_timestamp('Oct 29 01:30:00 2000');
+    $time = $parse->('Oct 29 01:30:00 2000');
     if ($time == 972_808_200) {
         is($time, 972_808_200, 'Parse of Oct 29 01:30:00 2000');
     } else {
         is($time, 972_811_800, 'Parse of Oct 29 01:30:00 2000');
     }
 }
+## use critic
