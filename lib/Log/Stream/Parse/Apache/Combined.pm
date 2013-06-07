@@ -40,10 +40,6 @@ my %MONTH_TO_NUM = (
     Dec => 11,
 );
 
-# Order of fields in an Apache log line, omitting timestamp (which will come
-# between ident_user and query).
-my @FIELDS = qw(client user ident_user query status size referrer user_agent);
-
 # Build a CSV parser for the Apache access logs.  The quote and escape syntax
 # is something that Text::CSV can deal with, and it is much, much faster than
 # using regular expressions.
@@ -163,30 +159,37 @@ sub parse {
 
     # Pull out the timestamp and parse it.  We also use this as our sanity
     # check to ensure that the line is a valid Apache log line.
-    my $timestamp = _parse_timestamp(splice(@fields, 3, 2));
+    my (
+        $client, $user,   $ident, $time,     $zone,
+        $query,  $status, $size,  $referrer, $agent
+    ) = @fields;
+    my $timestamp = _parse_timestamp($time, $zone);
     return {} if !defined($timestamp);
 
-    # Store the rest of the fields.
-    my %result;
-  FIELD:
-    for my $i (0 .. $#fields) {
-        next FIELD if $fields[$i] eq q{-};
-        $result{ $FIELDS[$i] } = $fields[$i];
-    }
-    $result{vhost}     = $vhost;
-    $result{timestamp} = $timestamp;
-
     # Parse the query string.
-    if ($result{query} =~ m{ $QUERY_STRING_REGEX }xmso) {
-        my ($method, $query, $protocol) = ($1, $2, $3);
-        my $base_query = $query;
+    my ($method, $base_query, $protocol);
+    if ($query =~ m{ $QUERY_STRING_REGEX }xmso) {
+        ($method, $query, $protocol) = ($1, $2, $3);
+        $base_query = $query;
         $base_query =~ s{ [?] .* }{}xms;
-        $result{method}     = $method;
-        $result{query}      = $query;
-        $result{base_query} = $base_query;
-        $result{protocol}   = $protocol;
     }
-    return \%result;
+
+    # Return the results.
+    return {
+        vhost      => $vhost,
+        client     => $client,
+        user       => $user ne q{-} ? $user : undef,
+        ident_user => $ident ne q{-} ? $ident : undef,
+        timestamp  => $timestamp,
+        method     => $method,
+        query      => $query,
+        base_query => $base_query,
+        protocol   => $protocol,
+        status     => $status,
+        size       => $size,
+        referrer   => (@fields > 8 && $referrer ne q{-}) ? $referrer : undef,
+        user_agent => (@fields > 9 && $agent ne q{-}) ? $agent : undef,
+    };
 }
 
 ##############################################################################
