@@ -11,7 +11,6 @@
 package Log::Stream::Rewindable;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
@@ -46,20 +45,19 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $stream) = @_;
 
-    # Get the head and tail of our stream.
-    my $head = $stream->head;
-    my $tail = $stream->tail;
+    # Get the head and generator of our stream.
+    my $head      = $stream->head;
+    my $generator = $stream->generator;
 
-    # If there is no tail, start with a very simple stream.
-    if (!defined($tail)) {
-        my $self = [$head];
+    # If there is no head, start with a very simple stream.
+    my $self = [];
+    if (!defined($head)) {
         bless($self, $class);
         return $self;
     }
 
     # Our promise reads from the queue by preference.  Bookmarking has to be
     # done in get(), since we don't want to save the head element.
-    my $self = [];
     my $code;
     $code = sub {
         my $next;
@@ -69,11 +67,9 @@ sub new {
                 $self->[3] = undef;
             }
         } else {
-            return if !$tail;
-            ($next, $tail) = @{$tail};
-            $tail = $tail->();
+            $next = $generator->();
         }
-        return [$next, $code];
+        return $next;
     };
 
     # Build and return the object.
@@ -157,18 +153,20 @@ sub prepend {
     if (!defined($tail)) {
         $tail = sub {
             my $queue = $self->[3];
+            return if !$queue;
             if (@{$queue} == 1) {
                 my $head = $queue->[0];
                 $self->[3] = undef;
-                return [$head];
+                return $head;
             } else {
-                return [pop(@{$queue}), $tail];
+                return pop(@{$queue});
             }
         };
     }
 
     # Now, rebuild the object from the tail.
-    @{$self}[0, 1] = @{ $tail->() };
+    $self->[0] = $tail->();
+    $self->[1] = $tail;
     return 1;
 }
 

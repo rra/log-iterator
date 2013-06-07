@@ -56,23 +56,19 @@ sub new {
     # Otherwise, if no code was provided, we can provide a very efficient
     # merge that doesn't keep any of the underlying streams.
     else {
-        @streams = map { [$_->head, $_->tail] } @streams;
-        my $promise;
-        $promise = sub {
-            my $stream;
-            ($stream, @streams) = @streams;
-            return if !defined($stream);
-            return $stream if !@streams;
-            my $tail = $stream->[1];
-            if (reftype($tail) eq 'CODE') {
-                $tail = $tail->();
+        my @pairs = map { [$_->head, $_->generator] } @streams;
+        my $generator = sub {
+            my $pair;
+            ($pair, @pairs) = @pairs;
+            return if !defined($pair);
+            my $tail = [$pair->[1]->(), $pair->[1]];
+            if (defined($tail->[0])) {
+                push(@pairs, $tail);
             }
-            if (defined($tail)) {
-                push(@streams, $tail);
-            }
-            return [$stream->[0], $promise];
+            return $pair->[0];
         };
-        my $self = $promise->() || [];
+        my $head = $generator->();
+        my $self = defined($head) ? [$head, $generator] : [];
         bless($self, $class);
         return $self;
     }

@@ -11,7 +11,6 @@
 package Log::Stream::Parse;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
@@ -46,13 +45,12 @@ sub new {
     # Delegate the stream transformation to our parse() method.  We set things
     # up this way because it ensures method lookup will work properly for our
     # subclasses that override parse().
-    my $transform = sub { my ($line) = @_; return $self->parse($line) };
+    my $transform = sub { return $self->parse($_) };
 
     # Our filter discards any elements that are the empty hash.
     my $filter = sub {
-        my ($element) = @_;
-        my $type = reftype($element);
-        if ($type && $type eq 'HASH' && keys %{$element} == 0) {
+        my $type = reftype($_);
+        if ($type && $type eq 'HASH' && keys %{$_} == 0) {
             return 0;
         } else {
             return 1;

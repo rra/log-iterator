@@ -11,13 +11,10 @@
 package Log::Stream::Transform;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
 use base qw(Log::Stream);
-
-use Scalar::Util qw(reftype);
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -37,25 +34,21 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $transform, $stream) = @_;
 
-    # Grab the head and tail out of the stream.
-    my $head = $stream->head;
-    my $tail = $stream->tail;
+    # Grab the head and generator out of the stream.
+    my $head      = $stream->head;
+    my $generator = $stream->generator;
 
     # Transform the head.
     local $_ = $head;
     $head = $transform->($head);
 
-    # Turn the transform into a promise.
+    # Turn the transform into a generator.
     my $code;
     $code = sub {
-        if (reftype($tail) eq 'CODE') {
-            $tail = $tail->();
-        }
-        if (defined($tail)) {
-            my $next;
-            ($next, $tail) = @{$tail};
-            local $_ = $next;
-            return [$transform->($next), $code];
+        my $element = $generator->();
+        if (defined($element)) {
+            local $_ = $element;
+            return $transform->($element);
         } else {
             return;
         }

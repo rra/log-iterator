@@ -11,13 +11,10 @@
 package Log::Stream::Filter;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
 use base qw(Log::Stream);
-
-use Scalar::Util qw(reftype);
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -37,37 +34,37 @@ our $VERSION = '1.00';
 sub new {
     my ($class, $filter, $stream) = @_;
 
-    # Find the next valid object in the stream.  We do this in a slightly
-    # roundabout way, rather than using get, so that we leave the stream in a
-    # state where the head is the next matching object and we don't have a
-    # stray head we have to deal with.
-    my $head = $stream->head;
+    # Get the stream head and generator.
+    my $head      = $stream->head;
+    my $generator = $stream->generator;
+
+    # Find the next valid object in the stream.
     local $_ = $head;
     while (defined($head) && !$filter->($head)) {
-        $stream->get;
-        $head = $stream->head;
+        $head = $generator->();
         $_    = $head;
     }
 
-    # If there's a remaining tail, wrap it in a promise.
-    my $tail = $stream->tail;
-    my $code;
-    if (defined($tail)) {
-        $code = sub {
-            my $next;
+    # If we haven't seen the end of the stream, turn the filter into a
+    # generator.
+    my $self;
+    if (defined($head)) {
+        my $code = sub {
+            my $element;
           ELEMENT: {
-                return if !$tail;
-                ($next, $tail) = @{$tail};
-                $tail = $tail->();
-                local $_ = $next;
-                redo ELEMENT if !$filter->($next);
+                $element = $generator->();
+                return if !$element;
+                local $_ = $element;
+                redo ELEMENT if !$filter->($element);
             }
-            return [$next, $code];
+            return $element;
         };
+        $self = [$head, $code];
+    } else {
+        $self = [];
     }
 
-    # Build and return the object.
-    my $self = [$head, $code];
+    # Bless and return the object.
     bless($self, $class);
     return $self;
 }

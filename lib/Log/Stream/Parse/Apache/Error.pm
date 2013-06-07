@@ -11,7 +11,6 @@
 package Log::Stream::Parse::Apache::Error;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 

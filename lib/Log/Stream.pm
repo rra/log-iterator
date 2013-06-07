@@ -45,21 +45,13 @@ sub new {
         croak('code argument to new is not a code reference');
     }
 
-    # Code is a generator.  We want to turn it into a promise which, when
-    # called, returns an empty anonymous array if the generator has been
-    # exhausted or an array of the next value and the promise.
-    my $tail;
-    $tail = sub {
-        my $head = $code->();
-        if (defined($head)) {
-            return [$head, $tail];
-        } else {
-            return;
-        }
-    };
+    # Pull off the first element from the generator.  If it's undef, create
+    # the trivial stream; otherwise, stash the generator in our second
+    # element.
+    my $head = $code->();
+    my $self = defined($head) ? [$head, $code] : [];
 
     # The first result of that call is the initial object.
-    my $self = $tail->() || [];
     bless($self, $class);
     return $self;
 }
@@ -74,33 +66,30 @@ sub head {
     return $self->[0];
 }
 
-# Returns the tail of the stream.  This forces the promise, if any, and
-# returns an anonymous array of the next element and the promise, or just the
-# next element if the promise is exhausted.
+# Returns the generator of the stream.
 #
 # $self - The Log::Stream object
 #
-# Returns: Current tail of the stream
-sub tail {
+# Returns: Current generator of the stream
+sub generator {
     my ($self) = @_;
-    if ($self->[1]) {
-        $self->[1] = $self->[1]->();
-    }
     return $self->[1];
 }
 
-# Returns the next line in the stream and consumes it.  The tail becomes the
-# new contents of the stream.  Note that we leave any elements after the first
-# two in the object alone so that subclasses can use them for other storage.
+# Returns the next line in the stream and consumes it.  Query the generator
+# for the next item and set the new head.
 #
 # $self - The Log::Stream object
 #
 # Returns: Current head of the stream
 sub get {
     my ($self) = @_;
-    my $head   = $self->[0];
-    my $tail   = $self->tail;
-    @{$self}[0, 1] = $tail ? @{$tail} : ();
+    my $head = $self->[0];
+    return if !defined($head);
+    $self->[0] = $self->[1]->();
+    if (!defined($self->[0])) {
+        $self->[1] = undef;
+    }
     return $head;
 }
 
