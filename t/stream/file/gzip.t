@@ -15,7 +15,7 @@ use warnings;
 
 use File::Spec;
 
-use Test::More tests => 78;
+use Test::More tests => 81;
 
 # Load the module.
 BEGIN { use_ok('Log::Stream::File::Gzip') }
@@ -28,10 +28,10 @@ if (!-r $path) {
 my $stream = eval { Log::Stream::File::Gzip->new({ files => $path }) };
 is($@, q{}, 'No exceptions on object creation');
 if ($stream) {
-    isa_ok($stream, 'Log::Stream::File');
+    isa_ok($stream, 'Log::Stream::File::Gzip');
 } else {
     ok(0, 'Object creation failed');
-    BAIL_OUT('cannot continue without Log::Stream::File object');
+    BAIL_OUT('cannot continue without Log::Stream::File::Gzip object');
 }
 
 # Open the same test file manually and verify that we get the same results
@@ -80,7 +80,7 @@ for my $i (0 .. $#log_lines) {
 is($stream->head, undef, 'Undef from head at end of file');
 is($stream->get,  undef, 'Undef from get at end of file');
 
-# Test error handling.
+# Test constructor error handling.
 $stream = eval { Log::Stream::File::Gzip->new({}) };
 is($stream, undef, 'Creation failed without files argument');
 like($@, qr{ \A Missing [ ] files [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
@@ -89,3 +89,19 @@ $stream = eval { Log::Stream::File::Gzip->new({ files => [] }) };
 is($stream, undef, 'Creation failed empty files argument');
 like($@, qr{ \A Empty [ ] files [ ] argument [ ] to [ ] new [ ] at [ ] }xms,
     '...error');
+
+# Test handling of IO::Uncompress::Gunzip errors.
+$stream
+  = eval { Log::Stream::File::Gzip->new({ files => ['./nonexistent'] }) };
+is($stream, undef, 'Creation failed with nonexistent file');
+like($@, qr{ \A Cannot [ ] open [ ] [.] /nonexistent: }xms, '...error');
+$stream = Log::Stream::File::Gzip->new({ files => [$path, './nonexistent'] });
+local $@ = undef;
+while ($stream->head && !$@) {
+    eval { $stream->get };
+}
+like(
+    $@,
+    qr{ \A Cannot [ ] open [ ] [.] /nonexistent: }xms,
+    'Error when opening nonexistent file'
+);
