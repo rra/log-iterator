@@ -11,15 +11,14 @@
 package Log::Stream::File::Gzip;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
-use base qw(Log::Stream::File);
+# We do not actually use any Log::Stream::File code, so don't inherit from it.
+use base qw(Log::Stream);
 
 use Carp qw(croak);
 use IO::Uncompress::Gunzip ();
-use Log::Stream;
 
 # Module version.  Waiting for Perl 5.12 to switch to the new package syntax.
 our $VERSION = '1.00';
@@ -33,21 +32,24 @@ our $VERSION = '1.00';
 # $class - Class of the object being created
 # $args  - Anonymous hash of arguments, with files as the only supported key
 #
-# Returns: New Log::Stream::File object
+# Returns: New Log::Stream::File::Gzip object
 #  Throws: Text exception for invalid arguments
-#          autodie::exception object on I/O failure
 sub new {
     my ($class, $args) = @_;
 
     # Ensure we were given a valid files argument and open the first file.
-    if (!defined $args->{files}) {
+    if (!defined($args->{files})) {
         croak('Missing files argument to new');
     }
-    my @files = ref $args->{files} ? @{ $args->{files} } : ($args->{files});
+    my @files = ref($args->{files}) ? @{ $args->{files} } : ($args->{files});
     if (!@files) {
         croak('Empty files argument to new');
     }
-    my $fh = IO::Uncompress::Gunzip->new(shift @files);
+    my $start = shift(@files);
+    my $fh    = IO::Uncompress::Gunzip->new($start);
+    if (!defined($fh)) {
+        croak("Cannot open $start: $IO::Uncompress::Gunzip::GunzipError");
+    }
 
     # Our generator code reads from each file in turn until hitting end of
     # file and then opens the next one.  IO::Uncompress::Gunzip returns an
@@ -56,21 +58,23 @@ sub new {
         my $line;
       LINE: {
             $line = $fh->getline;
-            if (!defined $line || $line eq q{}) {
+            if (!defined($line) || $line eq q{}) {
                 return if !@files;
-                $fh = IO::Uncompress::Gunzip->new(shift @files);
+                my $file = shift(@files);
+                $fh = IO::Uncompress::Gunzip->new($file);
+                if (!defined($fh)) {
+                    my $error = $IO::Uncompress::Gunzip::GunzipError;
+                    croak("Cannot open $file: $error");
+                }
                 redo LINE;
             }
         }
-        chomp $line;
+        chomp($line);
         return $line;
     };
 
-    # Construct and return the object.  We can't let our parent do this for us
-    # since it wants to reinterpret the files argument.
-    my $self = Log::Stream->new({ code => $code });
-    bless $self, $class;
-    return $self;
+    # Construct and return the object.
+    return $class->SUPER::new({ code => $code });
 }
 
 ##############################################################################
