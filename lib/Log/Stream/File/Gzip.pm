@@ -33,6 +33,12 @@ our $VERSION = '1.00';
 # Returns: File descriptor of running gzip process.
 sub _gunzip {
     my ($file) = @_;
+
+    # It's too hard to create conditions in the test suite where the fork and
+    # exec of gzip will fail, so mark it as uncoverable.  Perl optimizes or
+    # into unless, so the uncovered branch is the true branch.
+    #
+    # uncoverable branch true
     open(my $fh, q{-|}, 'gzip', '-dc', $file)
       or croak("Cannot fork gzip -dc: $!");
     return $fh;
@@ -68,7 +74,7 @@ sub new {
       LINE: {
             $line = readline($fh);
             if (!defined($line)) {
-                if (!close($fh) || $? != 0) {
+                if (!close($fh)) {
                     croak("gzip -dc $file failed with exit status $?");
                 }
                 return if !@files;
