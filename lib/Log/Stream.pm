@@ -102,6 +102,7 @@ __END__
 
 =for stopwords
 Allbery Kaufmann MERCHANTABILITY NONINFRINGEMENT parsers sublicense
+superclass Dominus ARGS undef
 
 =head1 NAME
 
@@ -165,6 +166,12 @@ the same line.  Returns undef at the end of the stream.
 Returns the next element in the stream and consumes it.  Repeated calls to
 get() will read through the entire stream, returning each element once.
 Returns undef at the end of the stream.
+
+=item generator()
+
+Returns the generator of the stream.  This is a code reference that, each
+time it is called, will return the next element of the stream or undef if
+the stream has been exhausted.
 
 =back
 
