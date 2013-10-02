@@ -11,7 +11,6 @@
 package Log::Stream::File::Gzip;
 
 use 5.010;
-use autodie;
 use strict;
 use warnings;
 
@@ -34,7 +33,8 @@ our $VERSION = '1.00';
 # Returns: File descriptor of running gzip process.
 sub _gunzip {
     my ($file) = @_;
-    open(my $fh, q{-|}, 'gzip', '-dc', $file);
+    open(my $fh, q{-|}, 'gzip', '-dc', $file)
+      or croak("Cannot fork gzip -dc: $!");
     return $fh;
 }
 
@@ -68,8 +68,7 @@ sub new {
       LINE: {
             $line = readline($fh);
             if (!defined($line)) {
-                eval { close($fh) };
-                if ($? != 0) {
+                if (!close($fh) || $? != 0) {
                     croak("gzip -dc $file failed with exit status $?");
                 }
                 return if !@files;
