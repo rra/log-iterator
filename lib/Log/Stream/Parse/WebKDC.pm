@@ -61,9 +61,8 @@ sub parse {
     my $data   = $result->{data};
 
     # Discard this line unless it's a mod_webkdc log message.
-    if (!$data || $data !~ s{ \A mod_webkdc: \s+ }{}xms) {
-        return {};
-    }
+    return {} if !$data;
+    return {} if $data !~ s{ \A mod_webkdc: \s+ }{}xms;
 
     # One way or another, we will fill out other keys than data.
     delete $result->{data};
