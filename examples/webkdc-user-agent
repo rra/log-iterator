@@ -223,12 +223,12 @@ sub build_archive_stream {
 
         # Ensure this is an error log and there is a matching access log.
         my $machine;
-        if (m{ \A ([^.]+) [.] error [.] gz \z }xms) {
+        if (m{ \A ([^.]+) [.] error_log [.] gz \z }xms) {
             $machine = $1;
         } else {
             return;
         }
-        return if !-f "$machine.access.gz";
+        return if !-f "$machine.access_log.gz";
 
         # Found a good log pair.  Add it to %logs_for by machine.
         $logs_for{$machine} ||= [];
@@ -241,7 +241,7 @@ sub build_archive_stream {
     my @log_streams;
     for my $logs (values %logs_for) {
         my $access_log_for = sub {
-            s{ [.] error [.] gz \z }{.access.gz}xms;
+            s{ [.] error_log [.] gz \z }{.access_log.gz}xms;
             return $_;
         };
         my @error_logs = sort @{$logs};
