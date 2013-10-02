@@ -386,9 +386,11 @@ else {
     }
     my $user_count = scalar keys %users;
 
-    # Sort the user agents by descending count of users and print totals.
+    # Sort the user agents by descending count of users (falling back on
+    # alphabetically by agent) and print totals.
     my $by_users = sub {
-        scalar keys %{ $agents{$b} } <=> scalar keys %{ $agents{$a} };
+        scalar keys %{ $agents{$b} } <=> scalar keys %{ $agents{$a} }
+          || $a cmp $b;
     };
     for my $agent (sort $by_users keys %agents) {
         my $count = scalar keys $agents{$agent};
