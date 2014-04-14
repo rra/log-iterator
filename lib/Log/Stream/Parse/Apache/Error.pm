@@ -1,6 +1,6 @@
 # Log::Stream::Parse::Apache::Error -- Stream parser for Apache error logs
 #
-# Written by Russ Allbery <rra@stanford.edu>
+# Written by Russ Allbery <rra@cpan.org>
 # Copyright 2013
 #     The Board of Trustees of the Leland Stanford Junior University
 
@@ -253,7 +253,7 @@ be edited out of the stream normally).
 
 =head1 AUTHOR
 
-Russ Allbery <rra@stanford.edu>
+Russ Allbery <rra@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 

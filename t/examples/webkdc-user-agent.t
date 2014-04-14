@@ -6,7 +6,7 @@
 # real log files.  It just runs it on some basic input data and exercises
 # simple functionality to ensure that nothing is horribly broken.
 #
-# Written by Russ Allbery <rra@stanford.edu>
+# Written by Russ Allbery <rra@cpan.org>
 # Copyright 2013
 #     The Board of Trustees of the Leland Stanford Junior University
 #

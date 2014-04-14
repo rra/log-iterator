@@ -1,6 +1,6 @@
 # Log::Stream::Rewindable -- Make an infinite log stream partly rewindable.
 #
-# Written by Russ Allbery <rra@stanford.edu>
+# Written by Russ Allbery <rra@cpan.org>
 # Copyright 2013
 #     The Board of Trustees of the Leland Stanford Junior University
 
@@ -337,7 +337,7 @@ set in the stream.
 
 =head1 AUTHOR
 
-Russ Allbery <rra@stanford.edu>
+Russ Allbery <rra@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -6,7 +6,7 @@
 # agents of authenticated users.  From that, generate statistics showing how
 # many unique users use each user agent.
 #
-# Written by Russ Allbery <rra@stanford.edu>
+# Written by Russ Allbery <rra@cpan.org>
 # Copyright 2013
 #     The Board of Trustees of the Leland Stanford Junior University
 

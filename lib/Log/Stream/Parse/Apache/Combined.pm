@@ -1,6 +1,6 @@
 # Log::Stream::Parse::Apache::Combined -- Stream parser for Apache logs
 #
-# Written by Russ Allbery <rra@stanford.edu>
+# Written by Russ Allbery <rra@cpan.org>
 # Copyright 2009, 2012, 2013
 #     The Board of Trustees of the Leland Stanford Junior University
 
@@ -356,7 +356,7 @@ thread-safe.
 
 =head1 AUTHOR
 
-Russ Allbery <rra@stanford.edu>
+Russ Allbery <rra@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
