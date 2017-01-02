@@ -10,6 +10,10 @@ Design:
 
 General:
 
+ * Finish renaming everything to Log::Iterator from Log::Stream.
+
+ * Write package metadata and Changes and make a real release.
+
  * Test the stream parameters to all constructors to ensure that they
    support get().  (And head() if required.)
 
@@ -17,6 +21,8 @@ Documentation:
 
  * Remove the stock descriptions of head() and get() from all of the
    streams and refer to Log::Stream's documentation instead.
+
+ * Revise module descriptions for the iterator design.
 
 Style:
 
